@@ -4,28 +4,94 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Language - Ngôn Ngữ Ký Hiệu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header class="header">
-        <h1 class="logo">SIGN LANGUAGE</h1>
+        <h1 class="logo" id="logoHome" data-tooltip="Về trang chủ">SIGN LANGUAGE</h1>
         <div class="header-controls">
-            <button class="icon-btn theme-toggle" id="themeToggle">🌟</button>
-            <button class="icon-btn language-toggle">🌐</button>
-            <button class="btn btn-login">Đăng Nhập</button>
-            <button class="btn btn-register">Đăng Ký</button>
+            <button class="icon-btn theme-toggle" id="themeToggle" data-tooltip="Chế độ sáng - Click để chuyển sang chế độ tối">🌟</button>
+            <button class="icon-btn language-toggle" id="languageToggle" data-tooltip="Tiếng Việt (VN) - Click để chuyển sang English">🌐</button>
+            <button class="btn btn-login" data-translate="login">Đăng Nhập</button>
+            <button class="btn btn-register" data-translate="register">Đăng Ký</button>
         </div>
     </header>
 
     <div class="container">
         <main class="main-content">
             <div class="hero-section">
-                <h2 class="hero-title">Công cụ hỗ trợ nhận diện ngôn ngữ ký hiệu</h2>
-                <button class="btn btn-primary" id="startBtn">Bắt Đầu Ngay</button>
+                <h2 class="hero-title" data-translate="hero-title">Công cụ hỗ trợ nhận diện ngôn ngữ ký hiệu</h2>
+                <button class="btn btn-primary" id="startBtn" data-translate="start-btn">Bắt Đầu Ngay</button>
             </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Modern Login/Register Popup -->
+    <div class="auth-modal" id="authModal" style="display: none;">
+        <div class="auth-overlay" id="authOverlay"></div>
+        <div class="auth-container" id="container">
+            <div class="form-container sign-up">
+                <form id="registerForm">
+                    <h1 data-translate="create-account">Tạo Tài Khoản</h1>
+                    <div class="social-icons">
+                        <a href="#" class="icon"><i class="fa-brands fa-google-plus-g"></i></a>
+                        <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
+                        <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                    </div>
+                    <span data-translate="or-email-register">hoặc sử dụng email để đăng ký</span>
+                    <input type="text" id="registerName" data-translate-placeholder="name" placeholder="Họ và tên" required>
+                    <input type="email" id="registerEmail" data-translate-placeholder="email" placeholder="Email" required>
+                    <input type="password" id="registerPassword" data-translate-placeholder="password" placeholder="Mật khẩu" required>
+                    <div class="form-options">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="agreeTerms" required>
+                            <span><span data-translate="agree-terms">Tôi đồng ý với</span> <a href="#" data-translate="terms-of-use">điều khoản sử dụng</a></span>
+                        </label>
+                    </div>
+                    <button type="submit" data-translate="register">Đăng Ký</button>
+                </form>
+            </div>
+            <div class="form-container sign-in">
+                <form id="loginForm">
+                    <h1 data-translate="login">Đăng Nhập</h1>
+                    <div class="social-icons">
+                        <a href="#" class="icon"><i class="fa-brands fa-google-plus-g"></i></a>
+                        <a href="#" class="icon"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
+                        <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+                    </div>
+                    <span data-translate="or-email-login">hoặc sử dụng email và mật khẩu</span>
+                    <input type="email" id="loginEmail" data-translate-placeholder="email" placeholder="Email" required>
+                    <input type="password" id="loginPassword" data-translate-placeholder="password" placeholder="Mật khẩu" required>
+                    <div class="form-options">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="rememberMe">
+                            <span data-translate="remember-me">Ghi nhớ đăng nhập</span>
+                        </label>
+                        <a href="#" class="forgot-password" data-translate="forgot-password">Quên mật khẩu?</a>
+                    </div>
+                    <button type="submit" data-translate="login">Đăng Nhập</button>
+                </form>
+            </div>
+            <div class="toggle-container">
+                <div class="toggle">
+                    <div class="toggle-panel toggle-left">
+                        <h1 data-translate="welcome-back">Chào Mừng Trở Lại!</h1>
+                        <p data-translate="welcome-back-desc">Nhập thông tin cá nhân để sử dụng tất cả tính năng của trang web</p>
+                        <button class="hidden" id="login" data-translate="login">Đăng Nhập</button>
+                    </div>
+                    <div class="toggle-panel toggle-right">
+                        <h1 data-translate="hello">Xin Chào!</h1>
+                        <p data-translate="hello-desc">Đăng ký với thông tin cá nhân để sử dụng tất cả tính năng của trang web</p>
+                        <button class="hidden" id="register" data-translate="register">Đăng Ký</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script-simple.js"></script>
 </body>
 </html>
