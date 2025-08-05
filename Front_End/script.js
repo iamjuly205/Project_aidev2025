@@ -143,18 +143,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Logout function
     function logout() {
-        const confirmMessage = currentLanguage === 'vi'
-            ? 'Bạn có chắc chắn muốn đăng xuất?'
-            : 'Are you sure you want to logout?';
+        isLoggedIn = false;
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('rememberLogin');
 
-        if (confirm(confirmMessage)) {
-            isLoggedIn = false;
-            currentUser = null;
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('rememberLogin');
+        // Reset UI to logged out state
+        resetUIToLoggedOut();
 
-            // Reload page to reset UI
-            window.location.reload();
+        // Show login modal
+        showModal(false); // false = show login form
+    }
+
+    // Reset UI to logged out state
+    function resetUIToLoggedOut() {
+        if (elements.headerLoginBtn && elements.headerRegisterBtn) {
+            // Reset login button
+            elements.headerLoginBtn.textContent = currentLanguage === 'vi' ? 'Đăng Nhập' : 'Login';
+            elements.headerLoginBtn.style.background = '#007bff';
+
+            // Reset register button
+            elements.headerRegisterBtn.textContent = currentLanguage === 'vi' ? 'Đăng Ký' : 'Register';
+            elements.headerRegisterBtn.style.background = '#28a745';
+
+            // Remove old event listeners and add original ones back
+            elements.headerLoginBtn.replaceWith(elements.headerLoginBtn.cloneNode(true));
+            elements.headerRegisterBtn.replaceWith(elements.headerRegisterBtn.cloneNode(true));
+
+            // Get new references
+            elements.headerLoginBtn = document.querySelector('.btn-login');
+            elements.headerRegisterBtn = document.querySelector('.btn-register');
+
+            // Add original event listeners back
+            if (elements.headerLoginBtn) {
+                elements.headerLoginBtn.addEventListener('click', () => showModal(false));
+            }
+            if (elements.headerRegisterBtn) {
+                elements.headerRegisterBtn.addEventListener('click', () => showModal(true));
+            }
         }
     }
 
@@ -171,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 elements.startBtn.disabled = true;
 
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    showDashboard();
                 }, 1000);
             } else {
                 // User not logged in, show login modal
@@ -396,19 +422,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (elements.logoHome) {
         elements.logoHome.addEventListener('click', () => {
             console.log('🏠 Logo clicked - returning to home');
-            // If we're on dashboard or other pages, redirect to home
-            if (window.location.pathname.includes('dashboard.html')) {
-                window.location.href = 'index.html';
-            } else {
-                // If we're on home page, scroll to top and close modal
-                window.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-                hideModal();
-                if (elements.authContainer) {
-                    elements.authContainer.classList.remove('active');
-                }
+            // Show home page (works for single page app)
+            showHomePage();
+            // Scroll to top and close modal
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            hideModal();
+            if (elements.authContainer) {
+                elements.authContainer.classList.remove('active');
             }
         });
     }
@@ -467,10 +490,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateUIForLoggedInUser();
 
                 // Show success and close modal
-                const successMessage = currentLanguage === 'vi'
-                    ? 'Đăng nhập thành công!'
-                    : 'Login successful!';
-                alert(successMessage);
+                // const successMessage = currentLanguage === 'vi'
+                //     ? 'Đăng nhập thành công!'
+                //     : 'Login successful!';
+                // alert(successMessage);
                 hideModal();
 
                 // Reset form
@@ -571,6 +594,96 @@ document.addEventListener('DOMContentLoaded', function() {
     translatePage(currentLanguage);
 
     console.log('🎉 All initialization complete!');
+
+    // Dashboard Functions
+    function showDashboard() {
+        console.log('🎯 Showing dashboard');
+        document.getElementById('homePage').style.display = 'none';
+        document.getElementById('dashboardPage').style.display = 'block';
+
+        // Update page title
+        document.title = currentLanguage === 'vi' ? 'Dashboard - Sign Language' : 'Dashboard - Sign Language';
+
+        // Initialize dashboard functionality
+        initializeDashboard();
+    }
+
+    function showHomePage() {
+        console.log('🏠 Showing home page');
+        document.getElementById('homePage').style.display = 'block';
+        document.getElementById('dashboardPage').style.display = 'none';
+
+        // Update page title
+        document.title = currentLanguage === 'vi' ? 'Sign Language - Ngôn Ngữ Ký Hiệu' : 'Sign Language Recognition Tool';
+    }
+
+    function initializeDashboard() {
+        console.log('🔧 Initializing dashboard');
+
+        // Setup sidebar tabs
+        const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        sidebarTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+
+                // Remove active class from all tabs and contents
+                sidebarTabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding content
+                this.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+
+                console.log('📋 Switched to tab:', targetTab);
+            });
+        });
+
+        // Setup text-to-speech functionality
+        const textToSpeechBtn = document.getElementById('textToSpeechBtn');
+        if (textToSpeechBtn) {
+            textToSpeechBtn.addEventListener('click', function() {
+                const textInput = document.getElementById('textInput');
+                if (textInput) {
+                    const text = textInput.value.trim();
+                    if (!text) {
+                        const alertMessage = currentLanguage === 'vi'
+                            ? 'Vui lòng nhập nội dung cần chuyển đổi!'
+                            : 'Please enter text to convert!';
+                        alert(alertMessage);
+                        return;
+                    }
+                    console.log('Processing text:', text);
+                    const processingMessage = currentLanguage === 'vi'
+                        ? 'Đang xử lý văn bản thành giọng nói...\n\nVăn bản: ' + text
+                        : 'Processing text to speech...\n\nText: ' + text;
+                    alert(processingMessage);
+                }
+            });
+        }
+    }
+
+    // Update logout function to show home page instead of redirect
+    function logout() {
+        isLoggedIn = false;
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('rememberLogin');
+
+        // Reset UI to logged out state
+        resetUIToLoggedOut();
+
+        // Show home page instead of modal
+        showHomePage();
+    }
+
+    // Check if user should be on dashboard on page load
+    if (isLoggedIn && currentUser) {
+        // User is logged in, but we start on home page
+        // They can click "Get Started" to go to dashboard
+        console.log('✅ User is logged in, ready for dashboard access');
+    }
 });
 
 console.log('📝 Script file loaded');
