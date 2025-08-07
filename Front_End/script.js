@@ -1,6 +1,210 @@
 // Complete Fixed Script for Sign Language App
 console.log('🚀 Script loading...');
 
+// Dashboard Functions (moved to top for hoisting)
+function showDashboard() {
+    console.log('🎯 Showing dashboard');
+    document.getElementById('homePage').style.display = 'none';
+    document.getElementById('dashboardPage').style.display = 'block';
+
+    // Update page title
+    const currentLanguage = localStorage.getItem('language') || 'vi';
+    document.title = currentLanguage === 'vi' ? 'Dashboard - Sign Language' : 'Dashboard - Sign Language';
+
+    // Initialize dashboard functionality
+    initializeDashboard();
+}
+
+function showHomePage() {
+    console.log('🏠 Showing home page');
+    document.getElementById('homePage').style.display = 'block';
+    document.getElementById('dashboardPage').style.display = 'none';
+
+    // Update page title
+    const currentLanguage = localStorage.getItem('language') || 'vi';
+    document.title = currentLanguage === 'vi' ? 'Sign Language - Ngôn Ngữ Ký Hiệu' : 'Sign Language Recognition Tool';
+}
+
+function initializeDashboard() {
+    console.log('🔧 Initializing dashboard');
+
+    // Setup sidebar tabs
+    const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    sidebarTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+
+            // Remove active class from all tabs and contents
+            sidebarTabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Add active class to clicked tab and corresponding content
+            this.classList.add('active');
+            document.getElementById(targetTab).classList.add('active');
+
+            console.log('📋 Switched to tab:', targetTab);
+        });
+    });
+
+    // Setup text-to-speech functionality
+    const textToSpeechBtn = document.getElementById('textToSpeechBtn');
+    if (textToSpeechBtn) {
+        textToSpeechBtn.addEventListener('click', function() {
+            const textInput = document.getElementById('textInput');
+            const voiceSelect = document.getElementById('voiceSelect');
+            const languageSelect = document.getElementById('languageSelect');
+            
+            if (textInput) {
+                const text = textInput.value.trim();
+                const voice = voiceSelect ? voiceSelect.value : 'female';
+                const language = languageSelect ? languageSelect.value : 'vi';
+                
+                if (!text) {
+                    const currentLanguage = localStorage.getItem('language') || 'vi';
+                    const alertMessage = currentLanguage === 'vi'
+                        ? 'Vui lòng nhập nội dung cần chuyển đổi!'
+                        : 'Please enter text to convert!';
+                    alert(alertMessage);
+                    return;
+                }
+                
+                console.log('Processing text:', text, 'Voice:', voice, 'Language:', language);
+                
+                // Show audio controls
+                const audioControlsPanel = document.querySelector('.audio-controls-panel');
+                const audioStatus = document.querySelector('.audio-status');
+                
+                if (audioStatus) {
+                    audioStatus.textContent = 'Đang tạo âm thanh...';
+                }
+                
+                // Simulate processing
+                setTimeout(() => {
+                    if (audioStatus) {
+                        audioStatus.textContent = `Âm thanh đã được tạo (${voice}, ${language})`;
+                    }
+                    if (audioControlsPanel) {
+                        audioControlsPanel.style.display = 'flex';
+                    }
+                }, 2000);
+            }
+        });
+    }
+
+    // Setup speech-to-text functionality
+    const micContainer = document.getElementById('micContainer');
+    const micIcon = document.getElementById('micIcon');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const recordingTimer = document.getElementById('recordingTimer');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const convertSpeechBtn = document.getElementById('convertSpeechBtn');
+    const speechToTextOutput = document.getElementById('speechToTextOutput');
+    const downloadTextBtn = document.getElementById('downloadTextBtn');
+    
+    let isRecording = false;
+    let recordingInterval;
+    let recordingTime = 0;
+
+    if (micContainer) {
+        micContainer.addEventListener('click', function() {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+    }
+
+    function startRecording() {
+        isRecording = true;
+        recordingTime = 0;
+        
+        if (micIcon) {
+            micIcon.classList.add('recording');
+        }
+        
+        if (recordingStatus) {
+            recordingStatus.textContent = 'Đang ghi âm... Nhấn lại để dừng';
+        }
+        
+        if (recordingTimer) {
+            recordingTimer.style.display = 'block';
+        }
+        
+        // Start timer
+        recordingInterval = setInterval(() => {
+            recordingTime++;
+            const minutes = Math.floor(recordingTime / 60);
+            const seconds = recordingTime % 60;
+            if (timerDisplay) {
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+        
+        console.log('🎤 Recording started');
+    }
+
+    function stopRecording() {
+        isRecording = false;
+        
+        if (micIcon) {
+            micIcon.classList.remove('recording');
+        }
+        
+        if (recordingStatus) {
+            recordingStatus.textContent = 'Ghi âm hoàn tất. Nhấn mũi tên để chuyển đổi thành văn bản';
+        }
+        
+        if (recordingTimer) {
+            recordingTimer.style.display = 'none';
+        }
+        
+        if (convertSpeechBtn) {
+            convertSpeechBtn.style.display = 'block';
+        }
+        
+        clearInterval(recordingInterval);
+        console.log('🎤 Recording stopped');
+    }
+
+    if (convertSpeechBtn) {
+        convertSpeechBtn.addEventListener('click', function() {
+            if (speechToTextOutput) {
+                speechToTextOutput.value = 'Đang xử lý âm thanh...';
+                
+                // Simulate processing
+                setTimeout(() => {
+                    speechToTextOutput.value = 'Đây là văn bản được chuyển đổi từ giọng nói của bạn. Thời gian ghi âm: ' + timerDisplay.textContent;
+                    
+                    if (downloadTextBtn) {
+                        downloadTextBtn.style.display = 'flex';
+                    }
+                }, 2000);
+            }
+            
+            convertSpeechBtn.style.display = 'none';
+        });
+    }
+
+    // Setup download functionality
+    if (downloadTextBtn) {
+        downloadTextBtn.addEventListener('click', function() {
+            const text = speechToTextOutput.value;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'speech-to-text-result.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+}
+
 // Check if user is already logged in
 function checkExistingLogin() {
     const savedUser = localStorage.getItem('currentUser');
@@ -10,12 +214,8 @@ function checkExistingLogin() {
         try {
             const userData = JSON.parse(savedUser);
             if (userData && userData.name) {
-                console.log('✅ User found, redirecting to dashboard:', userData.name);
-                // Small delay to ensure page loads properly
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 100);
-                return true;
+                console.log('✅ User found:', userData.name);
+                return userData;
             }
         } catch (e) {
             console.error('❌ Error parsing saved user:', e);
@@ -31,10 +231,10 @@ function checkExistingLogin() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ DOM loaded, initializing...');
 
-    // Check if user is already logged in and redirect to dashboard
-    if (checkExistingLogin()) {
-        return; // Stop execution if redirecting
-    }
+    // Check if user is already logged in but stay on home page
+    const existingUser = checkExistingLogin();
+    // User will stay on home page regardless of login status
+    // They can click "Get Started" to access dashboard
 
     // Get all elements with error checking
     const elements = {
@@ -98,8 +298,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Authentication state management
-    let isLoggedIn = false;
-    let currentUser = null;
+    let isLoggedIn = !!existingUser;
+    let currentUser = existingUser || null;
 
     // Check login status
     function checkLoginStatus() {
@@ -117,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateUIForLoggedInUser() {
         if (isLoggedIn && currentUser && elements.headerLoginBtn && elements.headerRegisterBtn) {
             // Update login button to show user name (with language support)
+            const currentLanguage = localStorage.getItem('language') || 'vi';
             const greeting = currentLanguage === 'vi' ? `Xin chào, ${currentUser.name}` : `Hello, ${currentUser.name}`;
             elements.headerLoginBtn.textContent = greeting;
             elements.headerLoginBtn.style.background = '#4ecdc4';
@@ -151,20 +352,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset UI to logged out state
         resetUIToLoggedOut();
 
-        // Show login modal
-        showModal(false); // false = show login form
+        // Show home page instead of modal
+        showHomePage();
     }
 
     // Reset UI to logged out state
     function resetUIToLoggedOut() {
         if (elements.headerLoginBtn && elements.headerRegisterBtn) {
+            const currentLanguage = localStorage.getItem('language') || 'vi';
             // Reset login button
             elements.headerLoginBtn.textContent = currentLanguage === 'vi' ? 'Đăng Nhập' : 'Login';
-            elements.headerLoginBtn.style.background = '#007bff';
+            elements.headerLoginBtn.style.background = '#ffd700';
 
             // Reset register button
             elements.headerRegisterBtn.textContent = currentLanguage === 'vi' ? 'Đăng Ký' : 'Register';
-            elements.headerRegisterBtn.style.background = '#28a745';
+            elements.headerRegisterBtn.style.background = '#ffa500';
 
             // Remove old event listeners and add original ones back
             elements.headerLoginBtn.replaceWith(elements.headerLoginBtn.cloneNode(true));
@@ -190,14 +392,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Check if user is logged in
             if (isLoggedIn) {
-                // User is logged in, redirect to dashboard
-                console.log('✅ User logged in, redirecting to dashboard');
+                // User is logged in, show dashboard
+                console.log('✅ User logged in, showing dashboard');
+                const currentLanguage = localStorage.getItem('language') || 'vi';
                 const redirectingText = currentLanguage === 'vi' ? 'Đang chuyển hướng...' : 'Redirecting...';
                 elements.startBtn.textContent = redirectingText;
                 elements.startBtn.disabled = true;
 
                 setTimeout(() => {
                     showDashboard();
+                    elements.startBtn.textContent = currentLanguage === 'vi' ? 'Bắt Đầu Ngay' : 'Get Started';
+                    elements.startBtn.disabled = false;
                 }, 1000);
             } else {
                 // User not logged in, show login modal
@@ -220,6 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             font-size: 0.9rem;
                             border-left: 4px solid #2196f3;
                         `;
+                        const currentLanguage = localStorage.getItem('language') || 'vi';
                         const messageText = currentLanguage === 'vi'
                             ? '🚀 Vui lòng đăng nhập để sử dụng công cụ nhận diện ngôn ngữ ký hiệu!'
                             : '🚀 Please login to use the sign language recognition tool!';
@@ -275,7 +481,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateThemeTooltip() {
-        if (elements.themeToggle && typeof currentLanguage !== 'undefined') {
+        const currentLanguage = localStorage.getItem('language') || 'vi';
+        if (elements.themeToggle) {
             if (currentLanguage === 'vi') {
                 if (isDarkTheme) {
                     elements.themeToggle.setAttribute('data-tooltip', 'Chế độ tối - Click để chuyển sang chế độ sáng');
@@ -388,7 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update language toggle tooltip
         if (elements.languageToggle) {
             if (lang === 'vi') {
-                elements.languageToggle.setAttribute('data-tooltip', 'Tiếng Việt (VN) - Click để chuyển sang Tiếng Anh ');
+                elements.languageToggle.setAttribute('data-tooltip', 'Tiếng Việt (VN) - Click để chuyển sang English');
             } else {
                 elements.languageToggle.setAttribute('data-tooltip', 'English (US) - Click to switch to Vietnamese');
             }
@@ -451,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!email || !password) {
                 const alertMessage = currentLanguage === 'vi'
-                    ? 'Vui lòng nhập đầy đủ email và mật khẩu!'
+                    ? 'Vui lòng nhập ��ầy đủ email và mật khẩu!'
                     : 'Please enter both email and password!';
                 alert(alertMessage);
                 return;
@@ -489,11 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update UI
                 updateUIForLoggedInUser();
 
-                // Show success and close modal
-                // const successMessage = currentLanguage === 'vi'
-                //     ? 'Đăng nhập thành công!'
-                //     : 'Login successful!';
-                // alert(successMessage);
+                // Hide modal but stay on home page
                 hideModal();
 
                 // Reset form
@@ -506,6 +709,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Reset button
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
+
+                // Show success message
+                const successMessage = currentLanguage === 'vi'
+                    ? 'Đăng nhập thành công! Nhấn "Bắt Đầu Ngay" để truy cập dashboard.'
+                    : 'Login successful! Click "Get Started" to access dashboard.';
+                alert(successMessage);
             }, 1500);
         });
     }
@@ -571,11 +780,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update UI
                 updateUIForLoggedInUser();
 
-                // Show success and close modal
-                const registerSuccessMessage = currentLanguage === 'vi'
-                    ? 'Đăng ký thành công! Bạn đã được tự động đăng nhập.'
-                    : 'Registration successful! You have been automatically logged in.';
-                alert(registerSuccessMessage);
+                // Hide modal but stay on home page
                 hideModal();
 
                 // Reset form
@@ -584,6 +789,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Reset button
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
+
+                // Show success message
+                const registerSuccessMessage = currentLanguage === 'vi'
+                    ? 'Đăng ký thành công! Nhấn "Bắt Đầu Ngay" để truy cập dashboard.'
+                    : 'Registration successful! Click "Get Started" to access dashboard.';
+                alert(registerSuccessMessage);
             }, 1500);
         });
     }
@@ -593,97 +804,13 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTheme();
     translatePage(currentLanguage);
 
-    console.log('🎉 All initialization complete!');
-
-    // Dashboard Functions
-    function showDashboard() {
-        console.log('🎯 Showing dashboard');
-        document.getElementById('homePage').style.display = 'none';
-        document.getElementById('dashboardPage').style.display = 'block';
-
-        // Update page title
-        document.title = currentLanguage === 'vi' ? 'Dashboard - Sign Language' : 'Dashboard - Sign Language';
-
-        // Initialize dashboard functionality
-        initializeDashboard();
-    }
-
-    function showHomePage() {
-        console.log('🏠 Showing home page');
-        document.getElementById('homePage').style.display = 'block';
-        document.getElementById('dashboardPage').style.display = 'none';
-
-        // Update page title
-        document.title = currentLanguage === 'vi' ? 'Sign Language - Ngôn Ngữ Ký Hiệu' : 'Sign Language Recognition Tool';
-    }
-
-    function initializeDashboard() {
-        console.log('🔧 Initializing dashboard');
-
-        // Setup sidebar tabs
-        const sidebarTabs = document.querySelectorAll('.sidebar-tab');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        sidebarTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const targetTab = this.getAttribute('data-tab');
-
-                // Remove active class from all tabs and contents
-                sidebarTabs.forEach(t => t.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-
-                // Add active class to clicked tab and corresponding content
-                this.classList.add('active');
-                document.getElementById(targetTab).classList.add('active');
-
-                console.log('📋 Switched to tab:', targetTab);
-            });
-        });
-
-        // Setup text-to-speech functionality
-        const textToSpeechBtn = document.getElementById('textToSpeechBtn');
-        if (textToSpeechBtn) {
-            textToSpeechBtn.addEventListener('click', function() {
-                const textInput = document.getElementById('textInput');
-                if (textInput) {
-                    const text = textInput.value.trim();
-                    if (!text) {
-                        const alertMessage = currentLanguage === 'vi'
-                            ? 'Vui lòng nhập nội dung cần chuyển đổi!'
-                            : 'Please enter text to convert!';
-                        alert(alertMessage);
-                        return;
-                    }
-                    console.log('Processing text:', text);
-                    const processingMessage = currentLanguage === 'vi'
-                        ? 'Đang xử lý văn bản thành giọng nói...\n\nVăn bản: ' + text
-                        : 'Processing text to speech...\n\nText: ' + text;
-                    alert(processingMessage);
-                }
-            });
-        }
-    }
-
-    // Update logout function to show home page instead of redirect
-    function logout() {
-        isLoggedIn = false;
-        currentUser = null;
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('rememberLogin');
-
-        // Reset UI to logged out state
-        resetUIToLoggedOut();
-
-        // Show home page instead of modal
-        showHomePage();
-    }
-
-    // Check if user should be on dashboard on page load
+    // If user is already logged in, update UI but stay on home page
     if (isLoggedIn && currentUser) {
-        // User is logged in, but we start on home page
-        // They can click "Get Started" to go to dashboard
+        updateUIForLoggedInUser();
         console.log('✅ User is logged in, ready for dashboard access');
     }
+
+    console.log('🎉 All initialization complete!');
 });
 
 console.log('📝 Script file loaded');

@@ -12,21 +12,30 @@
             padding-top: 80px;
             height: 100vh;
             overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
         }
 
         .dashboard-layout {
             display: flex;
             height: calc(100vh - 80px);
             background: #f5f5f5;
+            position: relative;
         }
 
         /* Sidebar Styles */
         .sidebar {
-            width: 230px;
+            width: 280px;
+            min-width: 280px;
             background: #e8e8e8;
             border-right: 1px solid #ddd;
             display: flex;
             flex-direction: column;
+            position: relative;
+            z-index: 10;
         }
 
         .sidebar-tab {
@@ -216,16 +225,57 @@
                 <div class="tab-content active" id="text-to-speech">
                     <div class="input-section">
                         <h3>Nhập văn bản cần chuyển đổi:</h3>
-                        <textarea class="text-input" id="textInput" placeholder="Nhập văn bản của bạn tại đây..."></textarea>
-                        <button class="send-btn" id="textToSpeechBtn">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                        <div class="text-input-container">
+                            <textarea class="text-input" id="textInput" placeholder="Nhập văn bản của bạn tại đây..."></textarea>
+                            <button class="send-btn" id="textToSpeechBtn">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Voice and Language Options -->
+                        <div class="tts-options">
+                            <div class="option-group">
+                                <label for="voiceSelect">Giọng nói:</label>
+                                <select id="voiceSelect" class="option-select">
+                                    <option value="female">Nữ</option>
+                                    <option value="male">Nam</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label for="languageSelect">Ngôn ngữ:</label>
+                                <select id="languageSelect" class="option-select">
+                                    <option value="vi">Tiếng Việt</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
+                    
                     <div class="output-section">
-                        <div class="audio-controls">
-                            <div class="audio-icon">🔊</div>
-                            <p>Âm thanh sẽ được tạo ra tại đây</p>
-                            <button class="download-btn">Tải xuống âm thanh</button>
+                        <h3>Âm thanh được tạo:</h3>
+                        <div class="audio-player-container">
+                            <div class="audio-player">
+                                <div class="audio-icon-large">🔊</div>
+                                <div class="audio-info">
+                                    <p class="audio-status">Âm thanh sẽ được tạo ra tại đây</p>
+                                    <div class="audio-controls-panel" style="display: none;">
+                                        <button class="control-btn play-btn" id="playBtn">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <div class="progress-container">
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" id="progressFill"></div>
+                                            </div>
+                                            <div class="time-display">
+                                                <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+                                            </div>
+                                        </div>
+                                        <button class="control-btn download-audio-btn" id="downloadAudioBtn">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,15 +284,33 @@
                 <div class="tab-content" id="speech-to-text">
                     <div class="input-section">
                         <h3>Ghi âm giọng nói:</h3>
-                        <div class="audio-controls">
-                            <div class="audio-icon">🎤</div>
-                            <p>Nhấn để bắt đầu ghi âm</p>
-                            <button class="download-btn">Bắt đầu ghi âm</button>
+                        <div class="recording-container">
+                            <div class="microphone-area">
+                                <div class="mic-icon-container" id="micContainer">
+                                    <i class="fas fa-microphone mic-icon" id="micIcon"></i>
+                                    <div class="recording-pulse" id="recordingPulse" style="display: none;"></div>
+                                </div>
+                                <p class="recording-status" id="recordingStatus">Nhấn vào microphone để bắt đầu ghi âm</p>
+                                <div class="recording-timer" id="recordingTimer" style="display: none;">
+                                    <span id="timerDisplay">00:00</span>
+                                </div>
+                            </div>
+                            
+                            <button class="convert-btn" id="convertSpeechBtn" style="display: none;">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
                         </div>
                     </div>
+                    
                     <div class="output-section">
                         <h3>Văn bản được chuyển đổi:</h3>
-                        <textarea class="text-input" placeholder="Văn bản sẽ xuất hiện tại đây..." readonly></textarea>
+                        <div class="text-output-container">
+                            <textarea class="text-input" id="speechToTextOutput" placeholder="Văn bản sẽ xuất hiện tại đây..." readonly></textarea>
+                            <button class="download-text-btn" id="downloadTextBtn" style="display: none;">
+                                <i class="fas fa-download"></i>
+                                <span>Tải xuống văn bản</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
