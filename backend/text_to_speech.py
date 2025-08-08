@@ -1,117 +1,166 @@
 """
-Enhanced Text to Speech functionality with Google APIs
-Supports multiple TTS engines: Google Cloud TTS, gTTS, pyttsx3
+Dịch vụ chuyển văn bản thành giọng nói với Google APIs
+Hỗ trợ đầy đủ giọng nam/nữ và tiếng Việt/Anh
 """
 
 import os
 import json
-import base64
-from typing import Optional, Dict, Any
+import hashlib
+from typing import Dict, Any
 from gtts import gTTS
 import pyttsx3
-from io import BytesIO
-import tempfile
 from dotenv import load_dotenv
 
-# Load environment variables
+# Tải biến môi trường
 load_dotenv()
 
 class TextToSpeechService:
     def __init__(self):
+        """Khởi tạo dịch vụ Text-to-Speech"""
+        # Ngôn ngữ được hỗ trợ
         self.supported_languages = {
-            'vi': 'Vietnamese',
+            'vi': 'Tiếng Việt',
             'en': 'English'
         }
+        
+        # Giọng nói được hỗ trợ
         self.supported_voices = {
-            'male': 'Male Voice',
-            'female': 'Female Voice'
+            'male': 'Giọng Nam',
+            'female': 'Giọng Nữ'
         }
         
-        # Initialize Google Cloud TTS if credentials available
+        # Khởi tạo Google Cloud TTS nếu có credentials
         self.google_client = None
-        self._init_google_client()
+        self._khoi_tao_google_client()
         
-        # Initialize pyttsx3 engine
+        # Khởi tạo pyttsx3 engine
         self.pyttsx3_engine = None
-        self._init_pyttsx3_engine()
+        self._khoi_tao_pyttsx3_engine()
+        
+        print("✅ Dịch vụ Text-to-Speech đã được khởi tạo")
     
-    def _init_google_client(self):
-        """Initialize Google Cloud Text-to-Speech client"""
+    def _khoi_tao_google_client(self):
+        """Khởi tạo Google Cloud Text-to-Speech client"""
         try:
-            # Try to import Google Cloud TTS
             from google.cloud import texttospeech
             
-            # Check for service account credentials
+            # Kiểm tra service account credentials
             credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
             service_account_json = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
             
             if credentials_path and os.path.exists(credentials_path):
                 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
                 self.google_client = texttospeech.TextToSpeechClient()
-                print("✅ Google Cloud TTS initialized with service account file")
+                print("✅ Google Cloud TTS đã khởi tạo với service account file")
             elif service_account_json:
                 # Parse JSON credentials
                 credentials_info = json.loads(service_account_json)
                 from google.oauth2 import service_account
                 credentials = service_account.Credentials.from_service_account_info(credentials_info)
                 self.google_client = texttospeech.TextToSpeechClient(credentials=credentials)
-                print("✅ Google Cloud TTS initialized with service account JSON")
+                print("✅ Google Cloud TTS đã khởi tạo với service account JSON")
             else:
-                print("⚠️ Google Cloud TTS credentials not found, using fallback methods")
+                print("⚠️ Không tìm thấy Google Cloud TTS credentials, sử dụng phương pháp dự phòng")
                 
         except ImportError:
-            print("⚠️ Google Cloud TTS library not installed")
+            print("⚠️ Thư viện Google Cloud TTS chưa được cài đặt")
         except Exception as e:
-            print(f"⚠️ Failed to initialize Google Cloud TTS: {e}")
+            print(f"⚠️ Lỗi khởi tạo Google Cloud TTS: {e}")
     
-    def _init_pyttsx3_engine(self):
-        """Initialize pyttsx3 TTS engine"""
+    def _khoi_tao_pyttsx3_engine(self):
+        """Khởi tạo pyttsx3 TTS engine"""
         try:
             self.pyttsx3_engine = pyttsx3.init()
-            print("✅ pyttsx3 TTS engine initialized")
+            print("✅ pyttsx3 TTS engine đã được khởi tạo")
         except Exception as e:
-            print(f"⚠️ Failed to initialize pyttsx3: {e}")
+            print(f"⚠️ Lỗi khởi tạo pyttsx3: {e}")
     
-    def convert_text_to_speech_google_cloud(self, text: str, language: str = 'vi', voice: str = 'female') -> Dict[str, Any]:
-        """Convert text to speech using Google Cloud TTS"""
+    def _lay_cau_hinh_giong_noi_toi_uu(self, language: str, voice: str) -> Dict[str, Any]:
+        """Lấy cấu hình giọng nói tối ưu cho Google Cloud TTS"""
+        try:
+            from google.cloud import texttospeech
+            
+            # Cấu hình giọng nói được tối ưu hóa
+            voice_configs = {
+                'vi': {
+                    'female': {
+                        'language_code': 'vi-VN',
+                        'voice_name': 'vi-VN-Standard-A',  # Giọng nữ Việt Nam tự nhiên
+                        'ssml_gender': texttospeech.SsmlVoiceGender.FEMALE,
+                        'description': 'Giọng nữ Việt Nam chuẩn - Chất lượng cao'
+                    },
+                    'male': {
+                        'language_code': 'vi-VN',
+                        'voice_name': 'vi-VN-Standard-B',  # Giọng nam Việt Nam tự nhiên
+                        'ssml_gender': texttospeech.SsmlVoiceGender.MALE,
+                        'description': 'Giọng nam Việt Nam chuẩn - Chất lượng cao'
+                    }
+                },
+                'en': {
+                    'female': {
+                        'language_code': 'en-US',
+                        'voice_name': 'en-US-Standard-C',  # Giọng nữ Mỹ tự nhiên
+                        'ssml_gender': texttospeech.SsmlVoiceGender.FEMALE,
+                        'description': 'US English Female Standard - High Quality'
+                    },
+                    'male': {
+                        'language_code': 'en-US',
+                        'voice_name': 'en-US-Standard-B',  # Giọng nam Mỹ tự nhiên
+                        'ssml_gender': texttospeech.SsmlVoiceGender.MALE,
+                        'description': 'US English Male Standard - High Quality'
+                    }
+                }
+            }
+            
+            return voice_configs.get(language, voice_configs['vi']).get(voice, voice_configs['vi']['female'])
+        except ImportError:
+            # Fallback nếu Google Cloud không có sẵn
+            return {
+                'language_code': 'vi-VN' if language == 'vi' else 'en-US',
+                'voice_name': f'{language}-{voice}',
+                'description': f'{language} {voice} voice'
+            }
+    
+    def chuyen_van_ban_thanh_giong_noi_google_cloud(self, text: str, language: str = 'vi', voice: str = 'female') -> Dict[str, Any]:
+        """Chuyển văn bản thành giọng nói bằng Google Cloud TTS với cài đặt tối ưu"""
         try:
             from google.cloud import texttospeech
             
             if not self.google_client:
-                raise Exception("Google Cloud TTS client not initialized")
+                raise Exception("Google Cloud TTS client chưa được khởi tạo")
             
-            # Set up the input text
+            # Thiết lập văn bản đầu vào
             synthesis_input = texttospeech.SynthesisInput(text=text)
             
-            # Configure voice parameters
-            language_code = 'vi-VN' if language == 'vi' else 'en-US'
-            voice_name = None
+            # Lấy cấu hình giọng nói tối ưu
+            voice_config = self._lay_cau_hinh_giong_noi_toi_uu(language, voice)
             
-            if language == 'vi':
-                voice_name = 'vi-VN-Standard-A' if voice == 'female' else 'vi-VN-Standard-B'
-            else:
-                voice_name = 'en-US-Standard-C' if voice == 'female' else 'en-US-Standard-B'
-            
-            voice = texttospeech.VoiceSelectionParams(
-                language_code=language_code,
-                name=voice_name,
-                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE if voice == 'female' else texttospeech.SsmlVoiceGender.MALE
+            # Cấu hình tham số giọng nói
+            voice_params = texttospeech.VoiceSelectionParams(
+                language_code=voice_config['language_code'],
+                name=voice_config['voice_name'],
+                ssml_gender=voice_config['ssml_gender']
             )
             
-            # Configure audio output
+            # Cấu hình đầu ra âm thanh với chất lượng cao
             audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3
+                audio_encoding=texttospeech.AudioEncoding.MP3,
+                speaking_rate=1.0,    # Tốc độ nói bình thường
+                pitch=0.0,            # Cao độ bình thường
+                volume_gain_db=0.0,   # Âm lượng bình thường
+                sample_rate_hertz=24000  # Tần số mẫu chất lượng cao
             )
             
-            # Perform the text-to-speech request
+            # Thực hiện yêu cầu text-to-speech
             response = self.google_client.synthesize_speech(
                 input=synthesis_input,
-                voice=voice,
+                voice=voice_params,
                 audio_config=audio_config
             )
             
-            # Save audio to file
-            audio_filename = f"google_tts_{hash(text)}_{language}_{voice}.mp3"
+            # Lưu âm thanh vào file
+            text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+            audio_filename = f"google_tts_{text_hash}_{language}_{voice}.mp3"
             audio_path = os.path.join("audio_output", audio_filename)
             os.makedirs("audio_output", exist_ok=True)
             
@@ -126,30 +175,37 @@ class TextToSpeechService:
                 "text": text,
                 "language": language,
                 "voice": voice,
+                "voice_name": voice_config['voice_name'],
+                "voice_description": voice_config['description'],
                 "file_size": len(response.audio_content),
+                "quality": "high"
             }
             
         except Exception as e:
-            print(f"❌ Google Cloud TTS error: {e}")
+            print(f"❌ Lỗi Google Cloud TTS: {e}")
             raise e
     
-    def convert_text_to_speech_gtts(self, text: str, language: str = 'vi', voice: str = 'female') -> Dict[str, Any]:
-        """Convert text to speech using gTTS (Google Text-to-Speech)"""
+    def chuyen_van_ban_thanh_giong_noi_gtts(self, text: str, language: str = 'vi', voice: str = 'female') -> Dict[str, Any]:
+        """Chuyển văn bản thành giọng nói bằng gTTS (Google Text-to-Speech) - Phiên bản miễn phí"""
         try:
-            # gTTS language codes
+            # Mã ngôn ngữ gTTS
             lang_code = 'vi' if language == 'vi' else 'en'
             
-            # Create gTTS object
-            tts = gTTS(text=text, lang=lang_code, slow=False)
+            # gTTS không hỗ trợ chọn giọng, nhưng có thể điều chỉnh tốc độ
+            slow = False  # Tốc độ bình thường để chất lượng tốt hơn
             
-            # Save to file
-            audio_filename = f"gtts_{hash(text)}_{language}_{voice}.mp3"
+            # Tạo đối tượng gTTS
+            tts = gTTS(text=text, lang=lang_code, slow=slow)
+            
+            # Lưu vào file
+            text_hash = hashlib.md5(text.encode()).hexdigest()[:8]
+            audio_filename = f"gtts_{text_hash}_{language}_{voice}.mp3"
             audio_path = os.path.join("audio_output", audio_filename)
             os.makedirs("audio_output", exist_ok=True)
             
             tts.save(audio_path)
             
-            # Get file size
+            # Lấy kích thước file
             file_size = os.path.getsize(audio_path)
             
             return {
@@ -160,148 +216,126 @@ class TextToSpeechService:
                 "text": text,
                 "language": language,
                 "voice": voice,
+                "voice_description": f"gTTS {self.supported_languages[language]} voice",
                 "file_size": file_size,
+                "quality": "standard"
             }
             
         except Exception as e:
-            print(f"❌ gTTS error: {e}")
-            raise e
-    
-    def convert_text_to_speech_pyttsx3(self, text: str, language: str = 'vi', voice: str = 'female') -> Dict[str, Any]:
-        """Convert text to speech using pyttsx3"""
-        try:
-            if not self.pyttsx3_engine:
-                raise Exception("pyttsx3 engine not initialized")
-            
-            # Configure voice
-            voices = self.pyttsx3_engine.getProperty('voices')
-            if voices:
-                # Try to find appropriate voice
-                for v in voices:
-                    if voice == 'female' and 'female' in v.name.lower():
-                        self.pyttsx3_engine.setProperty('voice', v.id)
-                        break
-                    elif voice == 'male' and 'male' in v.name.lower():
-                        self.pyttsx3_engine.setProperty('voice', v.id)
-                        break
-            
-            # Set speech rate
-            self.pyttsx3_engine.setProperty('rate', 150)
-            
-            # Save to file
-            audio_filename = f"pyttsx3_{hash(text)}_{language}_{voice}.wav"
-            audio_path = os.path.join("audio_output", audio_filename)
-            os.makedirs("audio_output", exist_ok=True)
-            
-            self.pyttsx3_engine.save_to_file(text, audio_path)
-            self.pyttsx3_engine.runAndWait()
-            
-            # Get file size
-            file_size = os.path.getsize(audio_path) if os.path.exists(audio_path) else 0
-            
-            return {
-                "success": True,
-                "engine": "pyttsx3",
-                "audio_path": audio_path,
-                "audio_filename": audio_filename,
-                "text": text,
-                "language": language,
-                "voice": voice,
-                "file_size": file_size,
-            }
-            
-        except Exception as e:
-            print(f"❌ pyttsx3 error: {e}")
+            print(f"❌ Lỗi gTTS: {e}")
             raise e
     
     def convert_text_to_speech(self, text: str, language: str = 'vi', voice: str = 'female') -> Dict[str, Any]:
         """
-        Convert text to speech using the best available engine
-        
-        Args:
-            text (str): Text to convert
-            language (str): Language code ('vi' or 'en')
-            voice (str): Voice type ('male' or 'female')
-            
-        Returns:
-            Dict containing audio file info and metadata
+        Chuyển văn bản thành giọng nói bằng engine tốt nhất có sẵn
+        Ưu tiên: Google Cloud TTS > gTTS > pyttsx3
         """
+        # Kiểm tra đầu vào
         if not text.strip():
-            raise ValueError("Text cannot be empty")
+            raise ValueError("Văn bản không được để trống")
         
         if language not in self.supported_languages:
-            raise ValueError(f"Unsupported language: {language}")
+            raise ValueError(f"Ngôn ngữ không được hỗ trợ: {language}")
         
         if voice not in self.supported_voices:
-            raise ValueError(f"Unsupported voice: {voice}")
+            raise ValueError(f"Giọng nói không được hỗ trợ: {voice}")
         
-        # Try engines in order of preference
+        # Thử các engine theo thứ tự chất lượng
         engines_to_try = []
         
-        # Check environment preference
+        # Kiểm tra engine ưu tiên từ môi trường
         preferred_engine = os.getenv('TTS_ENGINE', 'auto').lower()
         
         if preferred_engine == 'google' and self.google_client:
             engines_to_try.append('google_cloud')
         elif preferred_engine == 'gtts':
             engines_to_try.append('gtts')
-        elif preferred_engine == 'pyttsx3':
-            engines_to_try.append('pyttsx3')
         else:
-            # Auto mode - try in order of quality
+            # Chế độ tự động - thử theo thứ tự chất lượng
             if self.google_client:
                 engines_to_try.append('google_cloud')
-            engines_to_try.extend(['gtts', 'pyttsx3'])
+            engines_to_try.append('gtts')
         
         last_error = None
         
         for engine in engines_to_try:
             try:
+                print(f"🔊 Đang thử TTS engine: {engine}")
+                
                 if engine == 'google_cloud':
-                    return self.convert_text_to_speech_google_cloud(text, language, voice)
+                    result = self.chuyen_van_ban_thanh_giong_noi_google_cloud(text, language, voice)
+                    print(f"✅ Google Cloud TTS thành công: {result.get('voice_name', 'unknown')}")
+                    return result
                 elif engine == 'gtts':
-                    return self.convert_text_to_speech_gtts(text, language, voice)
-                elif engine == 'pyttsx3':
-                    return self.convert_text_to_speech_pyttsx3(text, language, voice)
+                    result = self.chuyen_van_ban_thanh_giong_noi_gtts(text, language, voice)
+                    print(f"✅ gTTS thành công")
+                    return result
+                    
             except Exception as e:
                 last_error = e
-                print(f"⚠️ Engine {engine} failed: {e}")
+                print(f"⚠️ Engine {engine} thất bại: {e}")
                 continue
         
-        # If all engines failed
-        raise Exception(f"All TTS engines failed. Last error: {last_error}")
+        # Nếu tất cả engine đều thất bại
+        raise Exception(f"Tất cả TTS engines đều thất bại. Lỗi cuối: {last_error}")
     
     def get_supported_languages(self) -> Dict[str, str]:
-        """Get list of supported languages"""
+        """Lấy danh sách ngôn ngữ được hỗ trợ"""
         return self.supported_languages
     
     def get_supported_voices(self) -> Dict[str, str]:
-        """Get list of supported voices"""
+        """Lấy danh sách giọng nói được hỗ trợ"""
         return self.supported_voices
     
     def get_available_engines(self) -> Dict[str, bool]:
-        """Get status of available TTS engines"""
+        """Lấy trạng thái các TTS engines có sẵn"""
         return {
             "google_cloud": self.google_client is not None,
-            "gtts": True,  # gTTS should always be available if installed
+            "gtts": True,  # gTTS luôn có sẵn nếu được cài đặt
             "pyttsx3": self.pyttsx3_engine is not None
         }
+    
+    def get_voice_samples(self) -> Dict[str, Any]:
+        """Lấy văn bản mẫu để test giọng nói"""
+        return {
+            'vi': {
+                'sample_text': 'Xin chào, đây là giọng nói tiếng Việt. Chất lượng âm thanh rất tốt và phát âm chuẩn.',
+                'female_description': 'Giọng nữ Việt Nam tự nhiên, phát âm chuẩn, dễ nghe',
+                'male_description': 'Giọng nam Việt Nam tự nhiên, phát âm chuẩn, truyền cảm'
+            },
+            'en': {
+                'sample_text': 'Hello, this is English voice. The audio quality is excellent with clear pronunciation.',
+                'female_description': 'Natural US English female voice, clear and pleasant',
+                'male_description': 'Natural US English male voice, professional and clear'
+            }
+        }
 
-# Example usage
+# Ví dụ sử dụng
 if __name__ == "__main__":
     tts_service = TextToSpeechService()
     
-    print("Available engines:", tts_service.get_available_engines())
+    print("🔊 Engines có sẵn:", tts_service.get_available_engines())
+    print("🎵 Mẫu giọng nói:", json.dumps(tts_service.get_voice_samples(), indent=2, ensure_ascii=False))
     
-    # Test conversion
+    # Test chuyển đổi
     try:
+        # Test giọng nữ tiếng Việt
         result = tts_service.convert_text_to_speech(
-            text="Xin chào, đây là công cụ chuyển văn bản thành giọng nói",
+            text="Xin chào, tôi là giọng nữ tiếng Việt",
             language="vi",
             voice="female"
         )
-        
-        print("✅ TTS Success:")
+        print("✅ Test giọng nữ tiếng Việt thành công:")
         print(json.dumps(result, indent=2, ensure_ascii=False))
+        
+        # Test giọng nam tiếng Anh
+        result = tts_service.convert_text_to_speech(
+            text="Hello, I am an English male voice",
+            language="en",
+            voice="male"
+        )
+        print("✅ Test giọng nam tiếng Anh thành công:")
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        
     except Exception as e:
-        print(f"❌ TTS Failed: {e}")
+        print(f"❌ Test TTS thất bại: {e}")

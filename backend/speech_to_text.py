@@ -1,102 +1,109 @@
 """
-Enhanced Speech to Text functionality with Google APIs
-Supports multiple STT engines: Google Cloud Speech, SpeechRecognition
+Dịch vụ chuyển giọng nói thành văn bản với Google APIs
+Hỗ trợ đầy đủ tiếng Việt và tiếng Anh
 """
 
 import os
 import json
 import tempfile
 import wave
+import time
 from typing import Optional, Dict, Any
 import speech_recognition as sr
 from pydub import AudioSegment
 from dotenv import load_dotenv
 
-# Load environment variables
+# Tải biến môi trường
 load_dotenv()
 
 class SpeechToTextService:
     def __init__(self):
+        """Khởi tạo dịch vụ Speech-to-Text"""
+        # Ngôn ngữ được hỗ trợ
         self.supported_languages = {
-            'vi': 'Vietnamese',
+            'vi': 'Tiếng Việt',
             'en': 'English'
         }
+        
+        # Định dạng âm thanh được hỗ trợ
         self.supported_formats = ['wav', 'mp3', 'ogg', 'webm', 'flac', 'm4a']
         
-        # Initialize Google Cloud Speech client
+        # Khởi tạo Google Cloud Speech client
         self.google_client = None
-        self._init_google_client()
+        self._khoi_tao_google_client()
         
-        # Initialize SpeechRecognition
+        # Khởi tạo SpeechRecognition
         self.sr_recognizer = sr.Recognizer()
         
-    def _init_google_client(self):
-        """Initialize Google Cloud Speech-to-Text client"""
+        print("✅ Dịch vụ Speech-to-Text đã được khởi tạo")
+        
+    def _khoi_tao_google_client(self):
+        """Khởi tạo Google Cloud Speech-to-Text client"""
         try:
             from google.cloud import speech
             
-            # Check for service account credentials
+            # Kiểm tra service account credentials
             credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
             service_account_json = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
             
             if credentials_path and os.path.exists(credentials_path):
                 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
                 self.google_client = speech.SpeechClient()
-                print("✅ Google Cloud Speech initialized with service account file")
+                print("✅ Google Cloud Speech đã khởi tạo với service account file")
             elif service_account_json:
                 # Parse JSON credentials
                 credentials_info = json.loads(service_account_json)
                 from google.oauth2 import service_account
                 credentials = service_account.Credentials.from_service_account_info(credentials_info)
                 self.google_client = speech.SpeechClient(credentials=credentials)
-                print("✅ Google Cloud Speech initialized with service account JSON")
+                print("✅ Google Cloud Speech đã khởi tạo với service account JSON")
             else:
-                print("⚠️ Google Cloud Speech credentials not found, using fallback methods")
+                print("⚠️ Không tìm thấy Google Cloud Speech credentials, sử dụng phương pháp dự phòng")
                 
         except ImportError:
-            print("⚠️ Google Cloud Speech library not installed")
+            print("⚠️ Thư viện Google Cloud Speech chưa được cài đặt")
         except Exception as e:
-            print(f"⚠️ Failed to initialize Google Cloud Speech: {e}")
+            print(f"⚠️ Lỗi khởi tạo Google Cloud Speech: {e}")
     
-    def _convert_audio_format(self, audio_file_path: str, target_format: str = 'wav') -> str:
-        """Convert audio file to target format"""
+    def _chuyen_doi_dinh_dang_am_thanh(self, audio_file_path: str, target_format: str = 'wav') -> str:
+        """Chuyển đổi file âm thanh sang định dạng mục tiêu"""
         try:
-            # Load audio file
+            # Tải file âm thanh
             audio = AudioSegment.from_file(audio_file_path)
             
-            # Convert to mono and set sample rate
+            # Chuyển đổi sang mono và đặt sample rate
             audio = audio.set_channels(1).set_frame_rate(16000)
             
-            # Create output path
+            # Tạo đường dẫn đầu ra
             base_name = os.path.splitext(os.path.basename(audio_file_path))[0]
             output_path = os.path.join(tempfile.gettempdir(), f"{base_name}_converted.{target_format}")
             
-            # Export in target format
+            # Xuất theo định dạng mục tiêu
             audio.export(output_path, format=target_format)
             
             return output_path
             
         except Exception as e:
-            print(f"❌ Audio conversion error: {e}")
+            print(f"❌ Lỗi chuyển đổi âm thanh: {e}")
             raise e
     
-    def convert_speech_to_text_google_cloud(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
-        """Convert speech to text using Google Cloud Speech-to-Text"""
+    def chuyen_giong_noi_thanh_van_ban_google_cloud(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
+        """Chuyển giọng nói thành văn bản bằng Google Cloud Speech-to-Text"""
         try:
             from google.cloud import speech
             
             if not self.google_client:
-                raise Exception("Google Cloud Speech client not initialized")
+                raise Exception("Google Cloud Speech client chưa được khởi tạo")
             
-            # Convert audio to WAV format if needed
+            # Chuyển đổi âm thanh sang định dạng WAV nếu cần
             if not audio_file.lower().endswith('.wav'):
-                audio_file = self._convert_audio_format(audio_file, 'wav')
+                audio_file = self._chuyen_doi_dinh_dang_am_thanh(audio_file, 'wav')
             
-            # Read audio file
+            # Đọc file âm thanh
             with open(audio_file, 'rb') as audio_data:
                 content = audio_data.read()
             
-            # Configure recognition
+            # Cấu hình nhận diện
             audio = speech.RecognitionAudio(content=content)
             
             language_code = 'vi-VN' if language == 'vi' else 'en-US'
@@ -110,10 +117,10 @@ class SpeechToTextService:
                 enable_word_time_offsets=True,
             )
             
-            # Perform recognition
+            # Thực hiện nhận diện
             response = self.google_client.recognize(config=config, audio=audio)
             
-            # Process results
+            # Xử lý kết quả
             transcripts = []
             confidence_scores = []
             
@@ -138,27 +145,27 @@ class SpeechToTextService:
             }
             
         except Exception as e:
-            print(f"❌ Google Cloud Speech error: {e}")
+            print(f"❌ Lỗi Google Cloud Speech: {e}")
             raise e
     
-    def convert_speech_to_text_sr_google(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
-        """Convert speech to text using SpeechRecognition with Google API"""
+    def chuyen_giong_noi_thanh_van_ban_sr_google(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
+        """Chuyển giọng nói thành văn bản bằng SpeechRecognition với Google API"""
         try:
-            # Convert audio to WAV format if needed
+            # Chuyển đổi âm thanh sang định dạng WAV nếu cần
             if not audio_file.lower().endswith('.wav'):
-                audio_file = self._convert_audio_format(audio_file, 'wav')
+                audio_file = self._chuyen_doi_dinh_dang_am_thanh(audio_file, 'wav')
             
-            # Load audio file
+            # Tải file âm thanh
             with sr.AudioFile(audio_file) as source:
-                # Adjust for ambient noise
+                # Điều chỉnh cho tiếng ồn xung quanh
                 self.sr_recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                # Record audio
+                # Ghi âm thanh
                 audio_data = self.sr_recognizer.record(source)
             
-            # Set language code
+            # Đặt mã ngôn ngữ
             language_code = 'vi-VN' if language == 'vi' else 'en-US'
             
-            # Perform recognition using Google API
+            # Thực hiện nhận diện bằng Google API
             api_key = os.getenv('GOOGLE_API_KEY')
             
             if api_key:
@@ -168,7 +175,7 @@ class SpeechToTextService:
                     key=api_key
                 )
             else:
-                # Use free Google API (with limitations)
+                # Sử dụng Google API miễn phí (có giới hạn)
                 transcript = self.sr_recognizer.recognize_google(
                     audio_data, 
                     language=language_code
@@ -180,43 +187,43 @@ class SpeechToTextService:
                 "transcribed_text": transcript,
                 "language": language,
                 "audio_file": audio_file,
-                "confidence": 0.85,  # Estimated confidence
+                "confidence": 0.85,  # Ước tính độ tin cậy
                 "word_count": len(transcript.split()),
             }
             
         except sr.UnknownValueError:
             return {
                 "success": False,
-                "error": "Could not understand audio",
+                "error": "Không thể hiểu được âm thanh",
                 "transcribed_text": "",
                 "language": language,
                 "audio_file": audio_file,
             }
         except sr.RequestError as e:
-            raise Exception(f"Google Speech Recognition API error: {e}")
+            raise Exception(f"Lỗi Google Speech Recognition API: {e}")
         except Exception as e:
-            print(f"❌ SpeechRecognition error: {e}")
+            print(f"❌ Lỗi SpeechRecognition: {e}")
             raise e
     
-    def convert_speech_to_text_sr_offline(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
-        """Convert speech to text using offline recognition (limited)"""
+    def chuyen_giong_noi_thanh_van_ban_sr_offline(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
+        """Chuyển giọng nói thành văn bản bằng nhận diện offline (giới hạn)"""
         try:
-            # Convert audio to WAV format if needed
+            # Chuyển đổi âm thanh sang định dạng WAV nếu cần
             if not audio_file.lower().endswith('.wav'):
-                audio_file = self._convert_audio_format(audio_file, 'wav')
+                audio_file = self._chuyen_doi_dinh_dang_am_thanh(audio_file, 'wav')
             
-            # Load audio file
+            # Tải file âm thanh
             with sr.AudioFile(audio_file) as source:
-                # Adjust for ambient noise
+                # Điều chỉnh cho tiếng ồn xung quanh
                 self.sr_recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                # Record audio
+                # Ghi âm thanh
                 audio_data = self.sr_recognizer.record(source)
             
-            # Try different offline engines
+            # Thử các engine offline khác nhau
             transcript = None
             engine_used = None
             
-            # Try Sphinx (if available)
+            # Thử Sphinx (nếu có sẵn)
             try:
                 transcript = self.sr_recognizer.recognize_sphinx(audio_data)
                 engine_used = "sphinx"
@@ -224,7 +231,7 @@ class SpeechToTextService:
                 pass
             
             if not transcript:
-                # Fallback to mock transcription for demo
+                # Fallback sang mock transcription cho demo
                 transcript = f"[Demo] Văn bản được chuyển đổi từ file audio: {os.path.basename(audio_file)}"
                 engine_used = "demo"
             
@@ -234,40 +241,42 @@ class SpeechToTextService:
                 "transcribed_text": transcript,
                 "language": language,
                 "audio_file": audio_file,
-                "confidence": 0.7,  # Estimated confidence
+                "confidence": 0.7,  # Ước tính độ tin cậy
                 "word_count": len(transcript.split()),
             }
             
         except Exception as e:
-            print(f"❌ Offline recognition error: {e}")
+            print(f"❌ Lỗi nhận diện offline: {e}")
             raise e
     
     def convert_speech_to_text(self, audio_file: str, language: str = 'vi') -> Dict[str, Any]:
         """
-        Convert speech/audio to text using the best available engine
+        Chuyển giọng nói/âm thanh thành văn bản bằng engine tốt nhất có sẵn
         
         Args:
-            audio_file (str): Path to audio file
-            language (str): Language code ('vi' or 'en')
+            audio_file (str): Đường dẫn đến file âm thanh
+            language (str): Mã ngôn ngữ ('vi' hoặc 'en')
             
         Returns:
-            Dict containing transcribed text and metadata
+            Dict chứa văn bản đã chuyển đổi và metadata
         """
+        # Kiểm tra file tồn tại
         if not os.path.exists(audio_file):
-            raise FileNotFoundError(f"Audio file not found: {audio_file}")
+            raise FileNotFoundError(f"Không tìm thấy file âm thanh: {audio_file}")
         
+        # Kiểm tra ngôn ngữ được hỗ trợ
         if language not in self.supported_languages:
-            raise ValueError(f"Unsupported language: {language}")
+            raise ValueError(f"Ngôn ngữ không được hỗ trợ: {language}")
         
-        # Get file extension
+        # Lấy phần mở rộng file
         file_ext = audio_file.split('.')[-1].lower()
         if file_ext not in self.supported_formats:
-            raise ValueError(f"Unsupported audio format: {file_ext}")
+            raise ValueError(f"Định dạng âm thanh không được hỗ trợ: {file_ext}")
         
-        # Try engines in order of preference
+        # Thử các engine theo thứ tự ưu tiên
         engines_to_try = []
         
-        # Check environment preference
+        # Kiểm tra engine ưu tiên từ môi trường
         preferred_engine = os.getenv('STT_ENGINE', 'auto').lower()
         
         if preferred_engine == 'google' and self.google_client:
@@ -275,7 +284,7 @@ class SpeechToTextService:
         elif preferred_engine == 'speech_recognition':
             engines_to_try.extend(['sr_google', 'sr_offline'])
         else:
-            # Auto mode - try in order of quality
+            # Chế độ tự động - thử theo thứ tự chất lượng
             if self.google_client:
                 engines_to_try.append('google_cloud')
             engines_to_try.extend(['sr_google', 'sr_offline'])
@@ -284,23 +293,31 @@ class SpeechToTextService:
         
         for engine in engines_to_try:
             try:
+                print(f"🎤 Đang thử STT engine: {engine}")
+                
                 if engine == 'google_cloud':
-                    return self.convert_speech_to_text_google_cloud(audio_file, language)
+                    result = self.chuyen_giong_noi_thanh_van_ban_google_cloud(audio_file, language)
+                    print(f"✅ Google Cloud Speech thành công")
+                    return result
                 elif engine == 'sr_google':
-                    return self.convert_speech_to_text_sr_google(audio_file, language)
+                    result = self.chuyen_giong_noi_thanh_van_ban_sr_google(audio_file, language)
+                    print(f"✅ SpeechRecognition Google thành công")
+                    return result
                 elif engine == 'sr_offline':
-                    return self.convert_speech_to_text_sr_offline(audio_file, language)
+                    result = self.chuyen_giong_noi_thanh_van_ban_sr_offline(audio_file, language)
+                    print(f"✅ SpeechRecognition Offline thành công")
+                    return result
+                    
             except Exception as e:
                 last_error = e
-                print(f"⚠️ Engine {engine} failed: {e}")
+                print(f"⚠️ Engine {engine} thất bại: {e}")
                 continue
         
-        # If all engines failed
-        raise Exception(f"All STT engines failed. Last error: {last_error}")
+        # Nếu tất cả engine đều thất bại
+        raise Exception(f"Tất cả STT engines đều thất bại. Lỗi cuối: {last_error}")
     
     def start_recording(self) -> Dict[str, Any]:
-        """Start audio recording session"""
-        import time
+        """Bắt đầu phiên ghi âm"""
         session_id = f"recording_{int(time.time())}"
         
         result = {
@@ -310,13 +327,13 @@ class SpeechToTextService:
             "start_time": time.time(),
         }
         
+        print(f"🎤 Bắt đầu ghi âm: {session_id}")
         return result
     
     def stop_recording(self, session_id: str) -> Dict[str, Any]:
-        """Stop audio recording and save file"""
-        import time
+        """Dừng ghi âm và lưu file"""
         
-        # Create recordings directory if it doesn't exist
+        # Tạo thư mục recordings nếu chưa tồn tại
         os.makedirs("recordings", exist_ok=True)
         
         audio_filename = f"{session_id}.wav"
@@ -331,38 +348,39 @@ class SpeechToTextService:
             "file_size": 1024 * 50,  # Mock file size
         }
         
+        print(f"🎤 Dừng ghi âm: {session_id}")
         return result
     
     def get_supported_languages(self) -> Dict[str, str]:
-        """Get list of supported languages"""
+        """Lấy danh sách ngôn ngữ được hỗ trợ"""
         return self.supported_languages
     
     def get_supported_formats(self) -> list:
-        """Get list of supported audio formats"""
+        """Lấy danh sách định dạng âm thanh được hỗ trợ"""
         return self.supported_formats
     
     def get_available_engines(self) -> Dict[str, bool]:
-        """Get status of available STT engines"""
+        """Lấy trạng thái các STT engines có sẵn"""
         return {
             "google_cloud": self.google_client is not None,
-            "speech_recognition": True,  # Should always be available if installed
+            "speech_recognition": True,  # Luôn có sẵn nếu được cài đặt
             "google_api_key": bool(os.getenv('GOOGLE_API_KEY'))
         }
 
-# Example usage
+# Ví dụ sử dụng
 if __name__ == "__main__":
     stt_service = SpeechToTextService()
     
-    print("Available engines:", stt_service.get_available_engines())
+    print("🎤 Engines có sẵn:", stt_service.get_available_engines())
     
-    # Test with a sample audio file (if exists)
+    # Test với file âm thanh mẫu (nếu tồn tại)
     test_audio = "test_audio.wav"
     if os.path.exists(test_audio):
         try:
             result = stt_service.convert_speech_to_text(test_audio, "vi")
-            print("✅ STT Success:")
+            print("✅ Test STT thành công:")
             print(json.dumps(result, indent=2, ensure_ascii=False))
         except Exception as e:
-            print(f"❌ STT Failed: {e}")
+            print(f"❌ Test STT thất bại: {e}")
     else:
-        print("ℹ️ No test audio file found")
+        print("ℹ️ Không tìm thấy file âm thanh test")
