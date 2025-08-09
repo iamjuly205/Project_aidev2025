@@ -58,7 +58,7 @@ def home():
 
 @app.route('/api/text-to-speech', methods=['POST'])
 def text_to_speech():
-    """Chuyển văn bản thành giọng nói với lựa chọn giọng tối ưu"""
+    """Chuyển văn bản thành giọng nói với lựa chọn giọng tối ưu và ElevenLabs"""
     try:
         data = request.get_json()
         
@@ -68,10 +68,11 @@ def text_to_speech():
         text = data['text']
         language = data.get('language', 'vi')
         voice = data.get('voice', 'female')
+        voice_id = data.get('voice_id')  # ElevenLabs voice ID
         
-        print(f"🔊 Yêu cầu TTS: text='{text[:50]}...', ngôn ngữ={language}, giọng={voice}")
+        print(f"🔊 Yêu cầu TTS: text='{text[:50]}...', ngôn ngữ={language}, giọng={voice}, voice_id={voice_id}")
         
-        result = tts_service.convert_text_to_speech(text, language, voice)
+        result = tts_service.convert_text_to_speech(text, language, voice, voice_id)
         
         print(f"✅ TTS thành công: engine {result.get('engine', 'unknown')}, giọng: {result.get('voice_name', 'unknown')}")
         return jsonify(result)
@@ -208,6 +209,69 @@ def test_voice():
         print(f"❌ Lỗi test giọng nói: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/voice-options', methods=['GET'])
+def get_voice_options():
+    """Lấy danh sách tùy chọn giọng nói chi tiết cho ElevenLabs"""
+    try:
+        voice_options = tts_service.get_voice_options()
+        return jsonify({
+            "success": True,
+            "voice_options": voice_options
+        })
+    except Exception as e:
+        print(f"❌ Lỗi lấy voice options: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/voice-info/<voice_id>', methods=['GET'])
+def get_voice_info(voice_id):
+    """Lấy thông tin chi tiết của một giọng nói theo voice_id"""
+    try:
+        voice_info = tts_service.get_voice_by_id(voice_id)
+        if voice_info:
+            return jsonify({
+                "success": True,
+                "voice_info": voice_info
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Không tìm thấy giọng nói với ID này"
+            }), 404
+    except Exception as e:
+        print(f"❌ Lỗi lấy voice info: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/test-voice-by-id', methods=['POST'])
+def test_voice_by_id():
+    """Test giọng nói cụ thể bằng voice_id"""
+    try:
+        data = request.get_json()
+        voice_id = data.get('voice_id')
+        language = data.get('language', 'vi')
+        
+        if not voice_id:
+            return jsonify({"success": False, "error": "Cần có voice_id"}), 400
+        
+        # Lấy thông tin giọng nói
+        voice_info = tts_service.get_voice_by_id(voice_id)
+        if not voice_info:
+            return jsonify({"success": False, "error": "Voice ID không hợp lệ"}), 400
+        
+        # Lấy văn bản mẫu cho ngôn ngữ
+        voice_samples = tts_service.get_voice_samples()
+        sample_text = voice_samples.get(language, {}).get('sample_text', 'Xin chào, đây là test giọng nói.')
+        
+        print(f"🎵 Test giọng nói bằng ID: voice_id={voice_id}, ngôn ngữ={language}")
+        
+        result = tts_service.convert_text_to_speech(sample_text, language, voice_info['gender'], voice_id)
+        
+        print(f"✅ Test gi��ng nói thành công: {result.get('voice_name', 'unknown')}")
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Lỗi test giọng nói bằng ID: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Kiểm tra sức khỏe chi tiết của hệ thống"""
@@ -224,6 +288,7 @@ def health_check():
         
         # Kiểm tra biến môi trường
         env_status = {
+            "ELEVENLABS_API_KEY": bool(os.getenv('ELEVENLABS_API_KEY')),
             "GOOGLE_API_KEY": bool(os.getenv('GOOGLE_API_KEY')),
             "GOOGLE_APPLICATION_CREDENTIALS": bool(os.getenv('GOOGLE_APPLICATION_CREDENTIALS')),
             "TTS_ENGINE": os.getenv('TTS_ENGINE', 'auto'),
