@@ -1,32 +1,7 @@
 """
-Ứng dụng backend chính
+Ứng dụng backend chính - ĐÃ SỬA LỖI HOÀN CHỈNH
 Xử lý các API endpoints và điều phối dịch vụ
 """
-#
-#                   _oo0oo_
-#                  088888880
-#                  88" . "88
-#                  (| -_- |)
-#                  0\  =  /0
-#                ___/`---'\___
-#              .' \\|     |// '.
-#             / \\|||  :  |||// \
-#            / _||||| -:- |||||_ \
-#           |   | \\\  -  /// |   |
-#           | \_|  ''\---/''  |_/ |
-#           \  .-\__  '-'  ___/-. /
-#         ___'. .'  /--.--\  `. .'___
-#      ."" '<  `.___\_<|>_/___.' >' "".
-#     | | :  `- \`.;`\ _ /`;.`/ - ` : | |
-#     \  \ `_.   \_ __\ /__ _/   .-` /  /
-# =====`-.____`.___ \_____/___.-`___.-'=====
-#                   `=---='
-#
-#  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-#         Phật phù hộ, không bao giờ BUG
-#
-#  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
@@ -47,8 +22,8 @@ def home():
     """Endpoint kiểm tra sức khỏe hệ thống"""
     return jsonify({
         "status": "running",
-        "message": "Sign Language Backend API - Phiên bản tối ưu",
-        "version": "1.2.0",
+        "message": "Sign Language Backend API - ĐÃ SỬA LỖI HOÀN CHỈNH",
+        "version": "1.3.0",
         "available_engines": {
             "tts": tts_service.get_available_engines(),
             "stt": stt_service.get_available_engines()
@@ -211,9 +186,27 @@ def test_voice():
 
 @app.route('/api/voice-options', methods=['GET'])
 def get_voice_options():
-    """Lấy danh sách tùy chọn giọng nói chi tiết cho ElevenLabs"""
+    """Lấy danh sách tùy chọn giọng nói chi tiết cho ElevenLabs - ĐÃ SỬA LỖI HOÀN CHỈNH"""
     try:
-        voice_options = tts_service.get_voice_options()
+        language = request.args.get('language', 'vi')  # ← ĐÃ SỬA: Lấy ngôn ngữ từ query parameter
+        print(f"🎵 API nhận language: {language}")
+        voice_options = tts_service.get_voice_options(language)  # ← ĐÃ SỬA: Truyền parameter language
+        print(f"✅ Trả về voice options cho {language}: {len(voice_options.get('female_voices', []))} nữ, {len(voice_options.get('male_voices', []))} nam")
+        
+        # Debug: In ra danh sách giọng nói chi tiết
+        if language == 'vi':
+            print("🇻🇳 Giọng tiếng Việt:")
+            for voice in voice_options.get('female_voices', []):
+                print(f"   Nữ: {voice.get('name')} - {voice.get('voice_id')}")
+            for voice in voice_options.get('male_voices', []):
+                print(f"   Nam: {voice.get('name')} - {voice.get('voice_id')}")
+        elif language == 'en':
+            print("🇺🇸 Giọng tiếng Anh:")
+            for voice in voice_options.get('female_voices', []):
+                print(f"   Nữ: {voice.get('name')} - {voice.get('voice_id')}")
+            for voice in voice_options.get('male_voices', []):
+                print(f"   Nam: {voice.get('name')} - {voice.get('voice_id')}")
+        
         return jsonify({
             "success": True,
             "voice_options": voice_options
@@ -265,7 +258,7 @@ def test_voice_by_id():
         
         result = tts_service.convert_text_to_speech(sample_text, language, voice_info['gender'], voice_id)
         
-        print(f"✅ Test gi��ng nói thành công: {result.get('voice_name', 'unknown')}")
+        print(f"✅ Test giọng nói thành công: {result.get('voice_name', 'unknown')}")
         return jsonify(result)
         
     except Exception as e:
@@ -319,7 +312,7 @@ if __name__ == '__main__':
     os.makedirs("recordings", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
     
-    print("🚀 Đang khởi động Sign Language Backend API - Phiên bản tối ưu...")
+    print("🚀 Đang khởi động Sign Language Backend API - ĐÃ SỬA LỖI HOÀN CHỈNH...")
     print("📡 API sẽ có sẵn tại: http://localhost:5000")
     print("📋 Các endpoints có sẵn:")
     print("  - GET  /                     - Kiểm tra sức khỏe hệ thống")

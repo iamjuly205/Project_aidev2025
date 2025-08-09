@@ -1,24 +1,36 @@
-// Script hoàn chỉnh với Audio Player và Speech Recognition thật
-console.log('🚀 Đang tải script với chức năng thật...');
+// ===== UNIFIED SCRIPT - GỘP TẤT CẢ CHỨC NĂNG =====
+// Gộp script.js + script-elevenlabs.js + script-elevenlabs-fixed.js
+console.log('🚀 Đang tải script thống nhất với tất cả chức năng...');
 
-// Biến global cho audio player
+// ===== BIẾN GLOBAL =====
+// Audio Player
 let currentAudio = null;
 let isPlaying = false;
 
-// Biến global cho speech recognition
+// Speech Recognition
 let recognition = null;
 let isRecording = false;
 let recordingTimer = null;
 let recordingTime = 0;
 
-// Các hàm Dashboard (đưa lên đầu để hoisting)
+// ElevenLabs Voice Options
+let voiceOptionsData = null;
+
+// Authentication
+let isLoggedIn = false;
+let currentUser = null;
+
+// Theme & Language
+let isDarkTheme = localStorage.getItem('darkTheme') === 'true';
+let currentLanguage = localStorage.getItem('language') || 'vi';
+
+// ===== DASHBOARD FUNCTIONS =====
 function showDashboard() {
     console.log('🎯 Hiển thị dashboard');
     document.getElementById('homePage').style.display = 'none';
     document.getElementById('dashboardPage').style.display = 'block';
 
     // Cập nhật tiêu đề trang
-    const currentLanguage = localStorage.getItem('language') || 'vi';
     document.title = currentLanguage === 'vi' ? 'Dashboard - Sign Language' : 'Dashboard - Sign Language';
 
     // Khởi tạo chức năng dashboard
@@ -39,7 +51,6 @@ function showHomePage() {
     document.body.style.height = '';
     
     // Cập nhật tiêu đề trang
-    const currentLanguage = localStorage.getItem('language') || 'vi';
     document.title = currentLanguage === 'vi' ? 'Sign Language - Ngôn Ngữ Ký Hiệu' : 'Sign Language Recognition Tool';
     
     // Đảm bảo header được định vị đúng
@@ -65,6 +76,88 @@ function showHomePage() {
     });
 }
 
+// ===== ELEVENLABS VOICE OPTIONS =====
+function loadVoiceOptionsFromBackend() {
+    const languageSelect = document.getElementById('languageSelect');
+    const language = languageSelect ? languageSelect.value : 'vi';
+    console.log('🎵 Đang tải danh sách giọng nói cho ngôn ngữ:', language);
+    
+    fetch(`http://localhost:5000/api/voice-options?language=${language}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                voiceOptionsData = data.voice_options;
+                console.log('✅ Đã tải danh sách giọng nói:', voiceOptionsData);
+                updateVoiceSelectFromGender();
+            } else {
+                console.error('❌ Lỗi tải danh sách giọng nói:', data.error);
+                setDefaultVoiceOptionsData();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Lỗi kết nối khi tải giọng nói:', error);
+            setDefaultVoiceOptionsData();
+        });
+}
+
+function setDefaultVoiceOptionsData() {
+    console.log('🔄 Sử dụng danh sách giọng nói mặc định');
+    const languageSelect = document.getElementById('languageSelect');
+    const language = languageSelect ? languageSelect.value : 'vi';
+    
+    if (language === 'vi') {
+        voiceOptionsData = {
+            female_voices: [
+                { id: 'voice1', name: 'Huyền', description: 'Giọng miền Bắc', voice_id: 'foH7s9fX31wFFH2yqrFa' },
+                { id: 'voice2', name: 'Như', description: 'Giọng nữ dịu dàng, chuyên nghiệp', voice_id: 'A5w1fw5x0uXded1LDvZp' }
+            ],
+            male_voices: [
+                { id: 'voice1', name: 'Việt Dũng', description: 'Giọng nam mạnh mẽ, tự tin', voice_id: 'BUPPIXeDaJWBz696iXRS' },
+                { id: 'voice2', name: 'Ly Hai', description: 'Giọng miền Nam', voice_id: '7hsfEc7irDn6E8br0qfw' }
+            ]
+        };
+    } else {
+        voiceOptionsData = {
+            female_voices: [
+                { id: 'voice1', name: 'Leoni Vergara', description: 'Young, energetic female voice', voice_id: 'pBZVCk298iJlHAcHQwLr' },
+                { id: 'voice2', name: 'Christina', description: 'Gentle, professional female voice', voice_id: '2qfp6zPuviqeCOZIE9RZ' }
+            ],
+            male_voices: [
+                { id: 'voice1', name: 'Sully', description: 'Strong, confident male voice', voice_id: 'wAGzRVkxKEs8La0lmdrE' },
+                { id: 'voice2', name: 'Jon', description: 'Young, friendly male voice', voice_id: 'MFZUKuGQUsGJPQjTS4wC' }
+            ]
+        };
+    }
+    updateVoiceSelectFromGender();
+}
+
+function updateVoiceSelectFromGender() {
+    const genderSelect = document.getElementById('genderSelect');
+    const voiceSelect = document.getElementById('voiceSelect');
+    
+    if (!genderSelect || !voiceSelect || !voiceOptionsData) {
+        console.log('⚠️ Không thể cập nhật voice select - thiếu elements hoặc data');
+        console.log('genderSelect:', !!genderSelect, 'voiceSelect:', !!voiceSelect, 'voiceOptionsData:', !!voiceOptionsData);
+        return;
+    }
+    
+    const selectedGender = genderSelect.value;
+    const voices = selectedGender === 'female' ? voiceOptionsData.female_voices : voiceOptionsData.male_voices;
+    
+    // Xóa các options cũ
+    voiceSelect.innerHTML = '';
+    
+    // Thêm các options mới
+    voices.forEach(voice => {
+        const option = document.createElement('option');
+        option.value = voice.voice_id;
+        option.textContent = `${voice.name} - ${voice.description}`;
+        voiceSelect.appendChild(option);
+    });
+    
+    console.log(`🎵 Đã cập nhật ${voices.length} giọng nói cho ${selectedGender}`);
+}
+
 // ===== AUDIO PLAYER FUNCTIONS =====
 function initializeAudioPlayer() {
     console.log('🎵 Khởi tạo Audio Player');
@@ -83,7 +176,6 @@ function initializeAudioPlayer() {
                     pauseAudio();
                 }
             } else {
-                const currentLanguage = localStorage.getItem('language') || 'vi';
                 const alertMessage = currentLanguage === 'vi'
                     ? 'Chưa có file âm thanh để phát. Vui lòng tạo âm thanh trước!'
                     : 'No audio file to play. Please create audio first!';
@@ -107,7 +199,6 @@ function initializeAudioPlayer() {
                 
                 console.log('📥 Download started:', window.currentAudioInfo.audio_filename);
             } else {
-                const currentLanguage = localStorage.getItem('language') || 'vi';
                 const alertMessage = currentLanguage === 'vi'
                     ? 'Chưa có file âm thanh để tải xuống!'
                     : 'No audio file to download!';
@@ -167,7 +258,6 @@ function playAudio() {
         // Xử lý lỗi
         currentAudio.addEventListener('error', function(e) {
             console.error('❌ Lỗi phát audio:', e);
-            const currentLanguage = localStorage.getItem('language') || 'vi';
             const errorMessage = currentLanguage === 'vi'
                 ? 'Không thể phát file âm thanh. Vui lòng kiểm tra kết nối và thử lại.'
                 : 'Cannot play audio file. Please check connection and try again.';
@@ -188,7 +278,6 @@ function playAudio() {
         updatePlayButton();
     }).catch(error => {
         console.error('❌ Lỗi phát audio:', error);
-        const currentLanguage = localStorage.getItem('language') || 'vi';
         const errorMessage = currentLanguage === 'vi'
             ? 'Không thể phát file âm thanh. Vui lòng kiểm tra kết nối backend.'
             : 'Cannot play audio file. Please check backend connection.';
@@ -285,7 +374,6 @@ function initializeSpeechRecognition() {
     recognition.maxAlternatives = 1;
     
     // Thiết lập ngôn ngữ mặc định
-    const currentLanguage = localStorage.getItem('language') || 'vi';
     recognition.lang = currentLanguage === 'vi' ? 'vi-VN' : 'en-US';
     
     // Xử lý kết quả
@@ -321,7 +409,6 @@ function initializeSpeechRecognition() {
         
         const speechToTextOutput = document.getElementById('speechToTextOutput');
         if (speechToTextOutput) {
-            const currentLanguage = localStorage.getItem('language') || 'vi';
             let errorMessage = '';
             
             switch(event.error) {
@@ -372,7 +459,7 @@ function startRecording() {
         return;
     }
     
-    console.log('��� Bắt đầu ghi âm');
+    console.log('🎤 Bắt đầu ghi âm');
     
     isRecording = true;
     recordingTime = 0;
@@ -380,7 +467,7 @@ function startRecording() {
     // Cập nhật UI
     const micIcon = document.getElementById('micIcon');
     const recordingStatus = document.getElementById('recordingStatus');
-    const recordingTimer = document.getElementById('recordingTimer');
+    const recordingTimerDiv = document.getElementById('recordingTimer');
     const timerDisplay = document.getElementById('timerDisplay');
     const convertSpeechBtn = document.getElementById('convertSpeechBtn');
     const speechToTextOutput = document.getElementById('speechToTextOutput');
@@ -390,14 +477,13 @@ function startRecording() {
     }
     
     if (recordingStatus) {
-        const currentLanguage = localStorage.getItem('language') || 'vi';
         recordingStatus.textContent = currentLanguage === 'vi'
             ? 'Đang ghi âm... Nhấn lại để dừng'
             : 'Recording... Click again to stop';
     }
     
-    if (recordingTimer) {
-        recordingTimer.style.display = 'block';
+    if (recordingTimerDiv) {
+        recordingTimerDiv.style.display = 'block';
     }
     
     if (convertSpeechBtn) {
@@ -405,7 +491,6 @@ function startRecording() {
     }
     
     if (speechToTextOutput) {
-        const currentLanguage = localStorage.getItem('language') || 'vi';
         speechToTextOutput.value = currentLanguage === 'vi'
             ? 'Đang lắng nghe...'
             : 'Listening...';
@@ -422,7 +507,6 @@ function startRecording() {
     }, 1000);
     
     // Cập nhật ngôn ngữ cho recognition
-    const currentLanguage = localStorage.getItem('language') || 'vi';
     recognition.lang = currentLanguage === 'vi' ? 'vi-VN' : 'en-US';
     
     // Bắt đầu recognition
@@ -464,7 +548,6 @@ function stopRecording() {
     }
     
     if (recordingStatus) {
-        const currentLanguage = localStorage.getItem('language') || 'vi';
         recordingStatus.textContent = currentLanguage === 'vi'
             ? 'Nhấn microphone để ghi âm'
             : 'Click microphone to record';
@@ -475,8 +558,146 @@ function stopRecording() {
     }
 }
 
+// ===== TEXT-TO-SPEECH WITH ELEVENLABS =====
+function handleTextToSpeech() {
+    const textInput = document.getElementById('textInput');
+    const genderSelect = document.getElementById('genderSelect');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const languageSelect = document.getElementById('languageSelect');
+    
+    if (textInput) {
+        const text = textInput.value.trim();
+        const gender = genderSelect ? genderSelect.value : 'female';
+        const voiceId = voiceSelect ? voiceSelect.value : null;
+        const language = languageSelect ? languageSelect.value : 'vi';
+        
+        console.log('🔍 Debug values:', {
+            text: text.substring(0, 50) + '...',
+            gender: gender,
+            voiceId: voiceId,
+            language: language,
+            hasGenderSelect: !!genderSelect,
+            hasVoiceSelect: !!voiceSelect,
+            hasLanguageSelect: !!languageSelect
+        });
+        
+        if (!text) {
+            alert(currentLanguage === 'vi' 
+                ? 'Vui lòng nhập nội dung cần chuyển đổi!'
+                : 'Please enter text to convert!');
+            return;
+        }
+        
+        if (!gender) {
+            alert(currentLanguage === 'vi'
+                ? 'Vui lòng chọn giới tính!'
+                : 'Please select gender!');
+            return;
+        }
+        
+        // Hiển thị controls âm thanh
+        const audioStatus = document.querySelector('.audio-status');
+        if (audioStatus) {
+            audioStatus.innerHTML = '<div style="color: #007bff;">🔄 Đang tạo âm thanh với ElevenLabs...</div>';
+        }
+        
+        // Chuẩn bị payload cho API
+        const payload = {
+            text: text,
+            language: language,
+            voice: gender
+        };
+        
+        // Thêm voice_id nếu có
+        if (voiceId) {
+            payload.voice_id = voiceId;
+        }
+        
+        console.log('📤 Gửi payload:', payload);
+        
+        // Gọi backend API để chuyển văn bản thành giọng nói
+        fetch('http://localhost:5000/api/text-to-speech', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('✅ Phản hồi TTS:', data);
+            if (audioStatus) {
+                if (data.success) {
+                    // Hiển thị thông tin chi tiết về giọng nói
+                    const voiceInfo = data.voice_description || `${gender} ${language}`;
+                    const voiceName = data.voice_name || 'Unknown';
+                    let engineInfo = '';
+                    
+                    switch(data.engine) {
+                        case 'elevenlabs':
+                            engineInfo = '🎵 ElevenLabs (Premium)';
+                            break;
+                        case 'google_cloud':
+                            engineInfo = '🔧 Google Cloud (Chất lượng cao)';
+                            break;
+                        case 'gtts':
+                            engineInfo = '📢 gTTS (Chuẩn)';
+                            break;
+                        default:
+                            engineInfo = data.engine || 'Unknown';
+                    }
+                    
+                    audioStatus.innerHTML = `
+                        <div style="color: #28a745; font-weight: 500;">
+                            ✅ Âm thanh đã được tạo thành công!
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                            🎤 Giọng: ${voiceName}<br>
+                            📝 Mô tả: ${voiceInfo}<br>
+                            ${engineInfo}<br>
+                            📁 Kích thước: ${(data.file_size / 1024).toFixed(1)} KB
+                        </div>
+                    `;
+                    
+                    const audioControlsPanel = document.querySelector('.audio-controls-panel');
+                    if (audioControlsPanel) {
+                        audioControlsPanel.style.display = 'flex';
+                    }
+                    
+                    // Lưu thông tin âm thanh để play và download
+                    window.currentAudioInfo = data;
+                    
+                    // Reset audio player để chuẩn bị cho file mới
+                    resetAudioPlayer();
+                } else {
+                    audioStatus.innerHTML = `
+                        <div style="color: #dc3545; font-weight: 500;">
+                            ❌ Lỗi: ${data.error || 'Không thể tạo âm thanh'}
+                        </div>
+                    `;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Lỗi TTS:', error);
+            if (audioStatus) {
+                audioStatus.innerHTML = `
+                    <div style="color: #dc3545; font-weight: 500;">
+                        ❌ Lỗi kết nối
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+                        Vui lòng kiểm tra backend server tại:<br>
+                        <code>http://localhost:5000</code>
+                    </div>
+                `;
+            }
+        });
+    }
+}
+
+// ===== DASHBOARD INITIALIZATION =====
 function initializeDashboard() {
-    console.log('🔧 Khởi tạo dashboard');
+    console.log('🔧 Khởi tạo dashboard với ElevenLabs');
 
     // Thiết lập các tab sidebar
     const sidebarTabs = document.querySelectorAll('.sidebar-tab');
@@ -498,107 +719,34 @@ function initializeDashboard() {
         });
     });
 
-    // Thiết lập chức năng text-to-speech
-    const textToSpeechBtn = document.getElementById('textToSpeechBtn');
-    if (textToSpeechBtn) {
-        textToSpeechBtn.addEventListener('click', function() {
-            const textInput = document.getElementById('textInput');
-            const voiceSelect = document.getElementById('voiceSelect');
-            const languageSelect = document.getElementById('languageSelect');
-            
-            if (textInput) {
-                const text = textInput.value.trim();
-                const voice = voiceSelect ? voiceSelect.value : 'female';
-                const language = languageSelect ? languageSelect.value : 'vi';
-                
-                if (!text) {
-                    const currentLanguage = localStorage.getItem('language') || 'vi';
-                    const alertMessage = currentLanguage === 'vi'
-                        ? 'Vui lòng nhập nội dung cần chuyển đổi!'
-                        : 'Please enter text to convert!';
-                    alert(alertMessage);
-                    return;
-                }
-                
-                console.log('🔊 Xử lý văn bản:', text, 'Giọng:', voice, 'Ngôn ngữ:', language);
-                
-                // Hiển thị controls âm thanh
-                const audioControlsPanel = document.querySelector('.audio-controls-panel');
-                const audioStatus = document.querySelector('.audio-status');
-                
-                if (audioStatus) {
-                    audioStatus.innerHTML = '<div style="color: #007bff;">🔄 Đang tạo âm thanh...</div>';
-                }
-                
-                // Gọi backend API để chuyển văn bản thành giọng nói
-                fetch('http://localhost:5000/api/text-to-speech', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        text: text,
-                        language: language,
-                        voice: voice
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('✅ Phản hồi TTS:', data);
-                    if (audioStatus) {
-                        if (data.success) {
-                            // Hiển thị thông tin chi tiết về giọng nói
-                            const voiceInfo = data.voice_description || `${voice} ${language}`;
-                            const engineInfo = data.engine === 'google_cloud' ? 'Google Cloud (Chất lượng cao)' : 'gTTS (Chuẩn)';
-                            
-                            audioStatus.innerHTML = `
-                                <div style="color: #28a745; font-weight: 500;">
-                                    ✅ Âm thanh đã được tạo thành công!
-                                </div>
-                                <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
-                                    🎵 Giọng: ${voiceInfo}<br>
-                                    🔧 Engine: ${engineInfo}<br>
-                                    📁 Kích thước: ${(data.file_size / 1024).toFixed(1)} KB
-                                </div>
-                            `;
-                            
-                            if (audioControlsPanel) {
-                                audioControlsPanel.style.display = 'flex';
-                            }
-                            
-                            // Lưu thông tin âm thanh để play và download
-                            window.currentAudioInfo = data;
-                            
-                            // Reset audio player để chuẩn bị cho file mới
-                            resetAudioPlayer();
-                        } else {
-                            audioStatus.innerHTML = `
-                                <div style="color: #dc3545; font-weight: 500;">
-                                    ❌ Lỗi: ${data.error || 'Không thể tạo âm thanh'}
-                                </div>
-                            `;
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Lỗi TTS:', error);
-                    if (audioStatus) {
-                        audioStatus.innerHTML = `
-                            <div style="color: #dc3545; font-weight: 500;">
-                                ❌ Lỗi kết nối
-                            </div>
-                            <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
-                                Vui lòng kiểm tra backend server tại:<br>
-                                <code>http://localhost:5000</code>
-                            </div>
-                        `;
-                    }
-                });
-            }
+    // Tải danh sách giọng nói
+    loadVoiceOptionsFromBackend();
+    
+    // Thiết lập event listener cho gender select
+    const genderSelect = document.getElementById('genderSelect');
+    if (genderSelect) {
+        genderSelect.addEventListener('change', function() {
+            console.log('👤 Thay đổi giới tính:', this.value);
+            updateVoiceSelectFromGender();
+        });
+    }
+    
+    // Thiết lập event listener cho language select
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.addEventListener('change', function() {
+            console.log('🌐 Thay đổi ngôn ngữ:', this.value);
+            loadVoiceOptionsFromBackend();
         });
     }
 
-    // Thiết lập chức năng speech-to-text với Web Speech API thật
+    // Thiết lập chức năng text-to-speech với ElevenLabs
+    const textToSpeechBtn = document.getElementById('textToSpeechBtn');
+    if (textToSpeechBtn) {
+        textToSpeechBtn.addEventListener('click', handleTextToSpeech);
+    }
+
+    // Thiết lập chức năng speech-to-text với Web Speech API
     const micContainer = document.getElementById('micContainer');
     const downloadTextBtn = document.getElementById('downloadTextBtn');
     const speechToTextOutput = document.getElementById('speechToTextOutput');
@@ -630,7 +778,6 @@ function initializeDashboard() {
                 
                 console.log('📥 Text downloaded');
             } else {
-                const currentLanguage = localStorage.getItem('language') || 'vi';
                 const alertMessage = currentLanguage === 'vi'
                     ? 'Chưa có văn bản để tải xuống!'
                     : 'No text to download!';
@@ -644,10 +791,7 @@ function initializeDashboard() {
     initializeSpeechRecognition();
 }
 
-// Phần còn lại của script giữ nguyên...
-// (Các hàm authentication, theme, language, etc.)
-
-// Kiểm tra người dùng đã đăng nhập chưa
+// ===== AUTHENTICATION FUNCTIONS =====
 function checkExistingLogin() {
     const savedUser = localStorage.getItem('currentUser');
     console.log('🔍 Kiểm tra đăng nhập hiện tại:', savedUser);
@@ -669,14 +813,266 @@ function checkExistingLogin() {
     return false;
 }
 
-// Đợi DOM được tải hoàn toàn
+function checkLoginStatus() {
+    const savedUser = localStorage.getItem('currentUser');
+    const rememberLogin = localStorage.getItem('rememberLogin');
+
+    if (savedUser && rememberLogin === 'true') {
+        isLoggedIn = true;
+        currentUser = JSON.parse(savedUser);
+        updateUIForLoggedInUser();
+    }
+}
+
+function updateUIForLoggedInUser() {
+    const headerLoginBtn = document.querySelector('.btn-login');
+    const headerRegisterBtn = document.querySelector('.btn-register');
+    
+    if (isLoggedIn && currentUser && headerLoginBtn && headerRegisterBtn) {
+        // Cập nhật nút đăng nhập để hiển thị tên người dùng
+        const greeting = currentLanguage === 'vi' ? `Xin chào, ${currentUser.name}` : `Hello, ${currentUser.name}`;
+        headerLoginBtn.textContent = greeting;
+        headerLoginBtn.style.background = '#4ecdc4';
+
+        // Cập nhật nút đăng ký thành đăng xuất
+        const logoutText = currentLanguage === 'vi' ? 'Đăng Xuất' : 'Logout';
+        headerRegisterBtn.textContent = logoutText;
+        headerRegisterBtn.style.background = '#ff6b6b';
+
+        // Xóa event listeners cũ và thêm mới
+        headerLoginBtn.replaceWith(headerLoginBtn.cloneNode(true));
+        headerRegisterBtn.replaceWith(headerRegisterBtn.cloneNode(true));
+
+        // Lấy references mới
+        const newHeaderLoginBtn = document.querySelector('.btn-login');
+        const newHeaderRegisterBtn = document.querySelector('.btn-register');
+
+        // Thêm chức năng đăng xuất
+        if (newHeaderRegisterBtn) {
+            newHeaderRegisterBtn.addEventListener('click', logout);
+        }
+    }
+}
+
+function logout() {
+    isLoggedIn = false;
+    currentUser = null;
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('rememberLogin');
+
+    // Reset UI về trạng thái đã đăng xuất
+    resetUIToLoggedOut();
+
+    // Hiển thị trang chủ thay vì modal
+    showHomePage();
+}
+
+function resetUIToLoggedOut() {
+    const headerLoginBtn = document.querySelector('.btn-login');
+    const headerRegisterBtn = document.querySelector('.btn-register');
+    
+    if (headerLoginBtn && headerRegisterBtn) {
+        // Reset nút đăng nhập
+        headerLoginBtn.textContent = currentLanguage === 'vi' ? 'Đăng Nhập' : 'Login';
+        headerLoginBtn.style.background = '#ffd700';
+
+        // Reset nút đăng ký
+        headerRegisterBtn.textContent = currentLanguage === 'vi' ? 'Đăng Ký' : 'Register';
+        headerRegisterBtn.style.background = '#ffa500';
+
+        // Xóa event listeners cũ và thêm lại các listeners gốc
+        headerLoginBtn.replaceWith(headerLoginBtn.cloneNode(true));
+        headerRegisterBtn.replaceWith(headerRegisterBtn.cloneNode(true));
+
+        // Lấy references mới và thêm lại event listeners gốc
+        const newHeaderLoginBtn = document.querySelector('.btn-login');
+        const newHeaderRegisterBtn = document.querySelector('.btn-register');
+
+        if (newHeaderLoginBtn) {
+            newHeaderLoginBtn.addEventListener('click', () => showModal(false));
+        }
+        if (newHeaderRegisterBtn) {
+            newHeaderRegisterBtn.addEventListener('click', () => showModal(true));
+        }
+    }
+}
+
+// ===== MODAL FUNCTIONS =====
+function showModal(showRegister = false) {
+    console.log(`📱 Hiển thị modal (đăng ký: ${showRegister})`);
+    const authModal = document.getElementById('authModal');
+    const authContainer = document.getElementById('container');
+    
+    if (authModal) {
+        authModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        if (authContainer) {
+            if (showRegister) {
+                authContainer.classList.add('active');
+            } else {
+                authContainer.classList.remove('active');
+            }
+        }
+    }
+}
+
+function hideModal() {
+    console.log('❌ Ẩn modal');
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// ===== THEME FUNCTIONS =====
+function updateTheme() {
+    if (isDarkTheme) {
+        document.body.classList.add('dark-theme');
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) themeToggle.textContent = '🌙';
+    } else {
+        document.body.classList.remove('dark-theme');
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) themeToggle.textContent = '🌟';
+    }
+    localStorage.setItem('darkTheme', isDarkTheme);
+    updateThemeTooltip();
+}
+
+function updateThemeTooltip() {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        if (currentLanguage === 'vi') {
+            if (isDarkTheme) {
+                themeToggle.setAttribute('data-tooltip', 'Chế độ tối - Click để chuyển sang chế độ sáng');
+            } else {
+                themeToggle.setAttribute('data-tooltip', 'Chế độ sáng - Click để chuyển sang chế độ tối');
+            }
+        } else {
+            if (isDarkTheme) {
+                themeToggle.setAttribute('data-tooltip', 'Dark mode - Click to switch to light mode');
+            } else {
+                themeToggle.setAttribute('data-tooltip', 'Light mode - Click to switch to dark mode');
+            }
+        }
+    }
+}
+
+// ===== LANGUAGE FUNCTIONS =====
+const translations = {
+    vi: {
+        'login': 'Đăng Nhập',
+        'register': 'Đăng Ký',
+        'hero-title': 'Công cụ hỗ trợ nhận diện ngôn ngữ ký hiệu',
+        'start-btn': 'Bắt Đầu Ngay',
+        'create-account': 'Tạo Tài Khoản',
+        'or-email-register': 'hoặc sử dụng email để đăng ký',
+        'agree-terms': 'Tôi đồng ý với',
+        'terms-of-use': 'điều khoản sử dụng',
+        'or-email-login': 'hoặc sử dụng email và mật khẩu',
+        'remember-me': 'Ghi nhớ đăng nhập',
+        'forgot-password': 'Quên mật khẩu?',
+        'welcome-back': 'Chào Mừng Trở Lại!',
+        'welcome-back-desc': 'Nhập thông tin cá nhân để sử dụng tất cả tính năng của trang web',
+        'hello': 'Xin Chào!',
+        'hello-desc': 'Đăng ký với thông tin cá nhân để sử dụng tất cả tính năng của trang web',
+        'name': 'Họ và tên',
+        'email': 'Email',
+        'password': 'Mật khẩu'
+    },
+    en: {
+        'login': 'Login',
+        'register': 'Register',
+        'hero-title': 'Sign Language Recognition Support Tool',
+        'start-btn': 'Get Started',
+        'create-account': 'Create Account',
+        'or-email-register': 'or use email to register',
+        'agree-terms': 'I agree with',
+        'terms-of-use': 'terms of use',
+        'or-email-login': 'or use email and password',
+        'remember-me': 'Remember me',
+        'forgot-password': 'Forgot password?',
+        'welcome-back': 'Welcome Back!',
+        'welcome-back-desc': 'Enter your personal details to use all features of the website',
+        'hello': 'Hello!',
+        'hello-desc': 'Register with your personal details to use all features of the website',
+        'name': 'Full Name',
+        'email': 'Email',
+        'password': 'Password'
+    }
+};
+
+function translatePage(lang) {
+    console.log(`🌐 Dịch sang: ${lang}`);
+    currentLanguage = lang;
+    localStorage.setItem('language', lang);
+
+    // Cập nhật tiêu đề trang
+    if (lang === 'en') {
+        document.title = 'Sign Language Recognition Tool';
+    } else {
+        document.title = 'Sign Language - Ngôn Ngữ Ký Hiệu';
+    }
+
+    // Dịch các elements
+    document.querySelectorAll('[data-translate]').forEach(element => {
+        const key = element.getAttribute('data-translate');
+        if (translations[lang] && translations[lang][key]) {
+            element.textContent = translations[lang][key];
+        }
+    });
+
+    // Dịch placeholders
+    document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-translate-placeholder');
+        if (translations[lang] && translations[lang][key]) {
+            element.placeholder = translations[lang][key];
+        }
+    });
+
+    // Cập nhật tooltips
+    updateThemeTooltip();
+    updateLogoTooltip();
+
+    // Cập nhật tooltip toggle ngôn ngữ
+    const languageToggle = document.getElementById('languageToggle');
+    if (languageToggle) {
+        if (lang === 'vi') {
+            languageToggle.setAttribute('data-tooltip', 'Tiếng Việt (VN) - Click để chuyển sang English');
+        } else {
+            languageToggle.setAttribute('data-tooltip', 'English (US) - Click to switch to Vietnamese');
+        }
+    }
+
+    // Cập nhật UI người dùng đã đăng nhập với ngôn ngữ mới
+    if (isLoggedIn) {
+        updateUIForLoggedInUser();
+    }
+}
+
+function updateLogoTooltip() {
+    const logoHome = document.getElementById('logoHome');
+    if (logoHome) {
+        if (currentLanguage === 'vi') {
+            logoHome.setAttribute('data-tooltip', 'Về trang chủ');
+        } else {
+            logoHome.setAttribute('data-tooltip', 'Return to home');
+        }
+    }
+}
+
+// ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ DOM đã tải, đang khởi tạo...');
+    console.log('✅ DOM đã tải, đang khởi tạo script thống nhất...');
 
-    // Kiểm tra người dùng đã đăng nhập nhưng vẫn ở trang chủ
+    // Kiểm tra người dùng đã đăng nhập
     const existingUser = checkExistingLogin();
+    isLoggedIn = !!existingUser;
+    currentUser = existingUser || null;
 
-    // Lấy tất cả elements với kiểm tra lỗi
+    // Lấy tất cả elements
     const elements = {
         authModal: document.getElementById('authModal'),
         authContainer: document.getElementById('container'),
@@ -697,32 +1093,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`  ${key}: ${elements[key] ? '✅' : '❌'}`);
     });
     
-    // Các hàm modal
-    function showModal(showRegister = false) {
-        console.log(`📱 Hiển thị modal (đăng ký: ${showRegister})`);
-        if (elements.authModal) {
-            elements.authModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            
-            if (elements.authContainer) {
-                if (showRegister) {
-                    elements.authContainer.classList.add('active');
-                } else {
-                    elements.authContainer.classList.remove('active');
-                }
-            }
-        }
-    }
-    
-    function hideModal() {
-        console.log('❌ Ẩn modal');
-        if (elements.authModal) {
-            elements.authModal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    }
-    
-    // Event listeners cho các nút
+    // Event listeners cho các nút header
     if (elements.headerLoginBtn) {
         elements.headerLoginBtn.addEventListener('click', function() {
             console.log('🔑 Nút đăng nhập header được click');
@@ -736,105 +1107,15 @@ document.addEventListener('DOMContentLoaded', function() {
             showModal(true);
         });
     }
-    
-    // Quản lý trạng thái xác thực
-    let isLoggedIn = !!existingUser;
-    let currentUser = existingUser || null;
 
-    // Kiểm tra trạng thái đăng nhập
-    function checkLoginStatus() {
-        const savedUser = localStorage.getItem('currentUser');
-        const rememberLogin = localStorage.getItem('rememberLogin');
-
-        if (savedUser && rememberLogin === 'true') {
-            isLoggedIn = true;
-            currentUser = JSON.parse(savedUser);
-            updateUIForLoggedInUser();
-        }
-    }
-
-    // Cập nhật UI khi người dùng đã đăng nhập
-    function updateUIForLoggedInUser() {
-        if (isLoggedIn && currentUser && elements.headerLoginBtn && elements.headerRegisterBtn) {
-            // Cập nhật nút đăng nhập để hiển thị tên người dùng (với hỗ trợ ngôn ngữ)
-            const currentLanguage = localStorage.getItem('language') || 'vi';
-            const greeting = currentLanguage === 'vi' ? `Xin chào, ${currentUser.name}` : `Hello, ${currentUser.name}`;
-            elements.headerLoginBtn.textContent = greeting;
-            elements.headerLoginBtn.style.background = '#4ecdc4';
-
-            // Cập nhật nút đăng ký thành đăng xuất (với hỗ trợ ngôn ngữ)
-            const logoutText = currentLanguage === 'vi' ? 'Đăng Xuất' : 'Logout';
-            elements.headerRegisterBtn.textContent = logoutText;
-            elements.headerRegisterBtn.style.background = '#ff6b6b';
-
-            // Xóa event listeners cũ và thêm mới
-            elements.headerLoginBtn.replaceWith(elements.headerLoginBtn.cloneNode(true));
-            elements.headerRegisterBtn.replaceWith(elements.headerRegisterBtn.cloneNode(true));
-
-            // Lấy references mới
-            elements.headerLoginBtn = document.querySelector('.btn-login');
-            elements.headerRegisterBtn = document.querySelector('.btn-register');
-
-            // Thêm chức năng đăng xuất
-            if (elements.headerRegisterBtn) {
-                elements.headerRegisterBtn.addEventListener('click', logout);
-            }
-        }
-    }
-
-    // Hàm đăng xuất
-    function logout() {
-        isLoggedIn = false;
-        currentUser = null;
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('rememberLogin');
-
-        // Reset UI về trạng thái đã đăng xuất
-        resetUIToLoggedOut();
-
-        // Hiển thị trang chủ thay vì modal
-        showHomePage();
-    }
-
-    // Reset UI về trạng thái đã đăng xuất
-    function resetUIToLoggedOut() {
-        if (elements.headerLoginBtn && elements.headerRegisterBtn) {
-            const currentLanguage = localStorage.getItem('language') || 'vi';
-            // Reset nút đăng nhập
-            elements.headerLoginBtn.textContent = currentLanguage === 'vi' ? 'Đăng Nhập' : 'Login';
-            elements.headerLoginBtn.style.background = '#ffd700';
-
-            // Reset nút đăng ký
-            elements.headerRegisterBtn.textContent = currentLanguage === 'vi' ? 'Đăng Ký' : 'Register';
-            elements.headerRegisterBtn.style.background = '#ffa500';
-
-            // Xóa event listeners cũ và thêm lại các listeners gốc
-            elements.headerLoginBtn.replaceWith(elements.headerLoginBtn.cloneNode(true));
-            elements.headerRegisterBtn.replaceWith(elements.headerRegisterBtn.cloneNode(true));
-
-            // Lấy references mới
-            elements.headerLoginBtn = document.querySelector('.btn-login');
-            elements.headerRegisterBtn = document.querySelector('.btn-register');
-
-            // Thêm lại event listeners gốc
-            if (elements.headerLoginBtn) {
-                elements.headerLoginBtn.addEventListener('click', () => showModal(false));
-            }
-            if (elements.headerRegisterBtn) {
-                elements.headerRegisterBtn.addEventListener('click', () => showModal(true));
-            }
-        }
-    }
-
+    // Event listener cho nút bắt đầu
     if (elements.startBtn) {
         elements.startBtn.addEventListener('click', function() {
             console.log('🚀 Nút bắt đầu được click');
 
-            // Kiểm tra người dùng đã đăng nhập chưa
             if (isLoggedIn) {
                 // Người dùng đã đăng nhập, hiển thị dashboard
                 console.log('✅ Người dùng đã đăng nhập, hiển thị dashboard');
-                const currentLanguage = localStorage.getItem('language') || 'vi';
                 const redirectingText = currentLanguage === 'vi' ? 'Đang chuyển hướng...' : 'Redirecting...';
                 elements.startBtn.textContent = redirectingText;
                 elements.startBtn.disabled = true;
@@ -865,7 +1146,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             font-size: 0.9rem;
                             border-left: 4px solid #2196f3;
                         `;
-                        const currentLanguage = localStorage.getItem('language') || 'vi';
                         const messageText = currentLanguage === 'vi'
                             ? '🚀 Vui lòng đăng nhập để sử dụng công cụ nhận diện ngôn ngữ ký hiệu!'
                             : '🚀 Please login to use the sign language recognition tool!';
@@ -877,6 +1157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Event listeners cho modal
     if (elements.registerBtn) {
         elements.registerBtn.addEventListener('click', function() {
             console.log('📝 Nút đăng ký modal được click');
@@ -905,40 +1186,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Chức năng theme
-    let isDarkTheme = localStorage.getItem('darkTheme') === 'true';
-    
-    function updateTheme() {
-        if (isDarkTheme) {
-            document.body.classList.add('dark-theme');
-            if (elements.themeToggle) elements.themeToggle.textContent = '🌙';
-        } else {
-            document.body.classList.remove('dark-theme');
-            if (elements.themeToggle) elements.themeToggle.textContent = '🌟';
-        }
-        localStorage.setItem('darkTheme', isDarkTheme);
-        updateThemeTooltip();
-    }
-    
-    function updateThemeTooltip() {
-        const currentLanguage = localStorage.getItem('language') || 'vi';
-        if (elements.themeToggle) {
-            if (currentLanguage === 'vi') {
-                if (isDarkTheme) {
-                    elements.themeToggle.setAttribute('data-tooltip', 'Chế độ tối - Click để chuyển sang chế độ sáng');
-                } else {
-                    elements.themeToggle.setAttribute('data-tooltip', 'Chế độ sáng - Click để chuyển sang chế độ tối');
-                }
-            } else {
-                if (isDarkTheme) {
-                    elements.themeToggle.setAttribute('data-tooltip', 'Dark mode - Click to switch to light mode');
-                } else {
-                    elements.themeToggle.setAttribute('data-tooltip', 'Light mode - Click to switch to dark mode');
-                }
-            }
-        }
-    }
-    
+    // Event listener cho theme toggle
     if (elements.themeToggle) {
         elements.themeToggle.addEventListener('click', () => {
             console.log('🌟 Toggle theme được click');
@@ -954,99 +1202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Chức năng ngôn ngữ
-    let currentLanguage = localStorage.getItem('language') || 'vi';
-    
-    const translations = {
-        vi: {
-            'login': 'Đăng Nhập',
-            'register': 'Đăng Ký',
-            'hero-title': 'Công cụ hỗ trợ nhận diện ngôn ngữ ký hiệu',
-            'start-btn': 'Bắt Đầu Ngay',
-            'create-account': 'Tạo Tài Khoản',
-            'or-email-register': 'hoặc sử dụng email để đăng ký',
-            'agree-terms': 'Tôi đồng ý với',
-            'terms-of-use': 'điều khoản sử dụng',
-            'or-email-login': 'hoặc sử dụng email và mật khẩu',
-            'remember-me': 'Ghi nhớ đăng nhập',
-            'forgot-password': 'Quên mật khẩu?',
-            'welcome-back': 'Chào Mừng Trở Lại!',
-            'welcome-back-desc': 'Nhập thông tin cá nhân để sử dụng tất cả t��nh năng của trang web',
-            'hello': 'Xin Chào!',
-            'hello-desc': 'Đăng ký với thông tin cá nhân để sử dụng tất cả tính năng của trang web',
-            'name': 'Họ và tên',
-            'email': 'Email',
-            'password': 'Mật khẩu'
-        },
-        en: {
-            'login': 'Login',
-            'register': 'Register',
-            'hero-title': 'Sign Language Recognition Support Tool',
-            'start-btn': 'Get Started',
-            'create-account': 'Create Account',
-            'or-email-register': 'or use email to register',
-            'agree-terms': 'I agree with',
-            'terms-of-use': 'terms of use',
-            'or-email-login': 'or use email and password',
-            'remember-me': 'Remember me',
-            'forgot-password': 'Forgot password?',
-            'welcome-back': 'Welcome Back!',
-            'welcome-back-desc': 'Enter your personal details to use all features of the website',
-            'hello': 'Hello!',
-            'hello-desc': 'Register with your personal details to use all features of the website',
-            'name': 'Full Name',
-            'email': 'Email',
-            'password': 'Password'
-        }
-    };
-    
-    function translatePage(lang) {
-        console.log(`🌐 Dịch sang: ${lang}`);
-        currentLanguage = lang;
-        localStorage.setItem('language', lang);
-
-        // Cập nhật tiêu đề trang
-        if (lang === 'en') {
-            document.title = 'Sign Language Recognition Tool';
-        } else {
-            document.title = 'Sign Language - Ngôn Ngữ Ký Hiệu';
-        }
-
-        // Dịch các elements
-        document.querySelectorAll('[data-translate]').forEach(element => {
-            const key = element.getAttribute('data-translate');
-            if (translations[lang] && translations[lang][key]) {
-                element.textContent = translations[lang][key];
-            }
-        });
-
-        // Dịch placeholders
-        document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
-            const key = element.getAttribute('data-translate-placeholder');
-            if (translations[lang] && translations[lang][key]) {
-                element.placeholder = translations[lang][key];
-            }
-        });
-
-        // Cập nhật tooltips
-        updateThemeTooltip();
-        updateLogoTooltip();
-
-        // Cập nhật tooltip toggle ngôn ngữ
-        if (elements.languageToggle) {
-            if (lang === 'vi') {
-                elements.languageToggle.setAttribute('data-tooltip', 'Tiếng Việt (VN) - Click để chuyển sang English');
-            } else {
-                elements.languageToggle.setAttribute('data-tooltip', 'English (US) - Click to switch to Vietnamese');
-            }
-        }
-
-        // Cập nhật UI người dùng đã đăng nhập với ngôn ngữ mới
-        if (isLoggedIn) {
-            updateUIForLoggedInUser();
-        }
-    }
-    
+    // Event listener cho language toggle
     if (elements.languageToggle) {
         elements.languageToggle.addEventListener('click', function() {
             console.log('🌐 Toggle ngôn ngữ được click');
@@ -1055,22 +1211,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Chức năng logo
-    function updateLogoTooltip() {
-        if (elements.logoHome) {
-            if (currentLanguage === 'vi') {
-                elements.logoHome.setAttribute('data-tooltip', 'Về trang chủ');
-            } else {
-                elements.logoHome.setAttribute('data-tooltip', 'Return to home');
-            }
-        }
-    }
-    
+    // Event listener cho logo
     if (elements.logoHome) {
         elements.logoHome.addEventListener('click', () => {
             console.log('🏠 Logo được click - trở về trang chủ');
             
-            // Hiển thị trang chủ với cleanup đúng cách
             showHomePage();
             
             // Scroll lên đầu mượt mà
@@ -1089,10 +1234,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Xử lý submit form
+    // Xử lý submit form đăng nhập
     const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1118,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = true;
 
             setTimeout(() => {
-                // Tạo dữ liệu người dùng (trong app thực tế, sẽ đến từ API)
+                // Tạo dữ liệu người dùng
                 const userData = {
                     id: 1,
                     name: email.split('@')[0],
@@ -1130,7 +1273,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 isLoggedIn = true;
                 currentUser = userData;
 
-                // Luôn lưu người dùng hiện tại cho session, lưu preference ghi nhớ riêng
+                // Lưu vào localStorage
                 localStorage.setItem('currentUser', JSON.stringify(userData));
 
                 if (rememberMe) {
@@ -1142,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Cập nhật UI
                 updateUIForLoggedInUser();
 
-                // Ẩn modal nhưng ở lại trang chủ
+                // Ẩn modal
                 hideModal();
 
                 // Reset form
@@ -1156,12 +1299,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
 
-                // Không hiển thị thông báo thành công nữa
                 console.log('✅ Đăng nhập thành công');
             }, 1500);
         });
     }
 
+    // Xử lý submit form đăng ký
+    const registerForm = document.getElementById('registerForm');
     if (registerForm) {
         registerForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1204,7 +1348,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = true;
 
             setTimeout(() => {
-                // Tạo dữ liệu người dùng (trong app thực tế, sẽ đến từ API)
+                // Tạo dữ liệu người dùng
                 const userData = {
                     id: Date.now(),
                     name: name,
@@ -1223,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Cập nhật UI
                 updateUIForLoggedInUser();
 
-                // Ẩn modal nhưng ở lại trang chủ
+                // Ẩn modal
                 hideModal();
 
                 // Reset form
@@ -1233,24 +1377,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
 
-                // Không hiển thị thông báo thành công nữa
                 console.log('✅ Đăng ký thành công');
             }, 1500);
         });
     }
 
     // Khởi tạo mọi thứ
-    checkLoginStatus(); // Kiểm tra trạng thái đăng nhập trước
+    checkLoginStatus();
     updateTheme();
     translatePage(currentLanguage);
 
-    // Nếu người dùng đã đăng nhập, cập nhật UI nhưng ở lại trang chủ
+    // Nếu người dùng đã đăng nhập, cập nhật UI
     if (isLoggedIn && currentUser) {
         updateUIForLoggedInUser();
         console.log('✅ Người dùng đã đăng nhập, sẵn sàng truy cập dashboard');
     }
 
-    console.log('🎉 Hoàn thành khởi tạo tất cả!');
+    console.log('🎉 Hoàn thành khởi tạo script thống nhất!');
 });
 
-console.log('📝 File script với chức năng thật đã được tải');
+console.log('📝 Script thống nhất đã được tải hoàn toàn');

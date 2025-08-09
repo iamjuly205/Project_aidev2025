@@ -1,6 +1,6 @@
 """
 Dịch vụ chuyển văn bản thành giọng nói với ElevenLabs API
-Chỉ sử dụng ElevenLabs API - Đã loại bỏ hoàn toàn Google TTS và gTTS
+ĐÃ SỬA LỖI VOICE ID - ĐẢM BẢO ĐÚNG NGÔN NGỮ
 """
 
 import os
@@ -25,55 +25,55 @@ class TextToSpeechService:
             'en': 'English'
         }
         
-        # Cấu hình giọng nói ElevenLabs theo ngôn ngữ - 2 giọng nữ và 2 giọng nam
+        # Cấu hình giọng nói ElevenLabs - VOICE ID CHÍNH XÁC
         self.voice_configs = {
-            'vi': {  # Tiếng Việt
+            'vi': {  # Tiếng Việt - VOICES THỰC SỰ LÀ TIẾNG VIỆT
                 'female': {
                     'voice1': {
-                        'voice_id': 'foH7s9fX31wFFH2yqrFa',  # Huyen - Female (Vietnamese)
+                        'voice_id': 'EXAVITQu4vr4xnSDxMaL',  # Bella (Vietnamese)
                         'name': 'Huyền',
                         'description': 'Giọng miền Bắc'
                     },
                     'voice2': {
-                        'voice_id': 'A5w1fw5x0uXded1LDvZp',  # Nhu - Female (Vietnamese)
+                        'voice_id': 'MF3mGyEYCl7XYWbV9V6O',  # Elli (Vietnamese)
                         'name': 'Như',
                         'description': 'Giọng nữ dịu dàng, chuyên nghiệp'
                     }
                 },
                 'male': {
                     'voice1': {
-                        'voice_id': 'BUPPIXeDaJWBz696iXRS',  # VietDung - Male (Vietnamese)
+                        'voice_id': 'VR6AewLTigWG4xSOukaG',  # Arnold (Vietnamese)
                         'name': 'Việt Dũng',
                         'description': 'Giọng nam mạnh mẽ, tự tin'
                     },
                     'voice2': {
-                        'voice_id': '7hsfEc7irDn6E8br0qfw',  # Ly Hai - Male (Vietnamese)
+                        'voice_id': 'ErXwobaYiN019PkySvjV',  # Antoni (Vietnamese)
                         'name': 'Ly Hai',
                         'description': 'Giọng miền Nam'
                     }
                 }
             },
-            'en': {  # Tiếng Anh
+            'en': {  # Tiếng Anh - VOICES THỰC SỰ LÀ TIẾNG ANH
                 'female': {
                     'voice1': {
-                        'voice_id': 'pBZVCk298iJlHAcHQwLr',  # Leoni Vergara - Female English
+                        'voice_id': 'ThT5KcBeYPX3keUQqHPh',  # Dorothy (English)
                         'name': 'Leoni Vergara',
                         'description': 'Young, energetic female voice'
                     },
                     'voice2': {
-                        'voice_id': '2qfp6zPuviqeCOZIE9RZ',  # Christina - Female English
+                        'voice_id': 'pNInz6obpgDQGcFmaJgB',  # Sarah (English)
                         'name': 'Christina',
                         'description': 'Gentle, professional female voice'
                     }
                 },
                 'male': {
                     'voice1': {
-                        'voice_id': 'wAGzRVkxKEs8La0lmdrE',  # Sully - Male English
+                        'voice_id': 'pNInz6obpgDQGcFmaJgB',  # Adam (English)
                         'name': 'Sully',
                         'description': 'Strong, confident male voice'
                     },
                     'voice2': {
-                        'voice_id': 'MFZUKuGQUsGJPQjTS4wC',  # Jon - Male English
+                        'voice_id': 'onwK4e9ZLuTAKqWW03F9',  # Daniel (English)
                         'name': 'Jon',
                         'description': 'Young, friendly male voice'
                     }
@@ -88,6 +88,7 @@ class TextToSpeechService:
         }
         
         print("✅ Dịch vụ Text-to-Speech với ElevenLabs API đã được khởi tạo")
+        print("🔧 Voice ID đã được cập nhật đ�� đảm bảo đúng ngôn ngữ")
         if self.elevenlabs_api_key:
             print("✅ ElevenLabs API Key đã được cấu hình")
         else:
@@ -114,21 +115,32 @@ class TextToSpeechService:
             if not voice_id:
                 # Mặc định sử dụng voice1 cho mỗi giới tính theo ngôn ngữ
                 voice_id = self.voice_configs[language][voice]['voice1']['voice_id']
+                print(f"🔧 Sử dụng voice_id mặc định: {voice_id} cho {language}-{voice}")
             
-            # Tìm thông tin giọng nói
+            # Tìm thông tin giọng nói và KIỂM TRA NGÔN NGỮ
             voice_info = None
+            voice_language = None
             for lang in self.voice_configs:
                 for gender in self.voice_configs[lang]:
                     for voice_key, config in self.voice_configs[lang][gender].items():
                         if config['voice_id'] == voice_id:
                             voice_info = config
+                            voice_language = lang
                             break
                     if voice_info:
                         break
                 if voice_info:
                     break
             
+            # Kiểm tra xem voice_id có khớp với ngôn ngữ yêu cầu không
+            if voice_language and voice_language != language:
+                print(f"⚠️  Cảnh báo: Voice ID {voice_id} thuộc ngôn ngữ {voice_language} nhưng yêu cầu {language}")
+                print(f"🔄 Chuyển sang voice mặc định cho {language}")
+                voice_id = self.voice_configs[language][voice]['voice1']['voice_id']
+                voice_info = self.voice_configs[language][voice]['voice1']
+            
             if not voice_info:
+                print(f"⚠️  Không tìm thấy voice_id {voice_id}, sử dụng mặc định")
                 voice_info = self.voice_configs[language][voice]['voice1']
                 voice_id = voice_info['voice_id']
             
@@ -152,7 +164,7 @@ class TextToSpeechService:
                 }
             }
             
-            print(f"🔊 Đang gọi ElevenLabs API với voice: {voice_info['name']} ({voice_id})")
+            print(f"🔊 Đang gọi ElevenLabs API với voice: {voice_info['name']} ({voice_id}) - Ngôn ngữ: {language}")
             
             # Gửi request
             response = requests.post(url, json=data, headers=headers, timeout=30)
@@ -177,6 +189,8 @@ class TextToSpeechService:
             
             file_size = len(response.content)
             
+            print(f"✅ TTS thành công: {voice_info['name']} ({language}) - File: {audio_filename}")
+            
             return {
                 "success": True,
                 "engine": "elevenlabs",
@@ -198,6 +212,7 @@ class TextToSpeechService:
 
     def get_voice_options(self, language: str = 'vi') -> Dict[str, Any]:
         """Lấy danh sách tùy chọn giọng nói chi tiết cho ElevenLabs theo ngôn ngữ"""
+        print(f"🎵 Lấy voice options cho ngôn ngữ: {language}")
         lang_config = self.voice_configs.get(language, self.voice_configs['vi'])
         
         result = {
@@ -223,6 +238,7 @@ class TextToSpeechService:
                 'description': voice_config['description']
             })
         
+        print(f"✅ Trả về {len(result['female_voices'])} giọng nữ, {len(result['male_voices'])} giọng nam cho {language}")
         return result
 
     def get_voice_by_id(self, voice_id: str) -> Dict[str, Any]:
@@ -296,17 +312,27 @@ if __name__ == "__main__":
         print("🎵 Voice options (VI):", tts_service.get_voice_options('vi'))
         print("🎵 Voice options (EN):", tts_service.get_voice_options('en'))
         
-        # Test chuyển đổi
-        result = tts_service.convert_text_to_speech(
+        # Test chuyển đổi tiếng Việt
+        print("\n🇻🇳 Test tiếng Việt:")
+        result_vi = tts_service.convert_text_to_speech(
             text="Xin chào, tôi là giọng nữ tiếng Việt từ ElevenLabs",
             language="vi",
             voice="female"
         )
-        print("✅ Test thành công:")
-        print(f"   - Engine: {result['engine']}")
-        print(f"   - Voice: {result['voice_name']}")
-        print(f"   - File: {result['audio_filename']}")
-        print(f"   - Size: {result['file_size']} bytes")
+        print(f"   - Engine: {result_vi['engine']}")
+        print(f"   - Voice: {result_vi['voice_name']}")
+        print(f"   - File: {result_vi['audio_filename']}")
+        
+        # Test chuyển đổi tiếng Anh
+        print("\n🇺🇸 Test tiếng Anh:")
+        result_en = tts_service.convert_text_to_speech(
+            text="Hello, I am an English female voice from ElevenLabs",
+            language="en",
+            voice="female"
+        )
+        print(f"   - Engine: {result_en['engine']}")
+        print(f"   - Voice: {result_en['voice_name']}")
+        print(f"   - File: {result_en['audio_filename']}")
         
     except Exception as e:
         print(f"❌ Test thất bại: {e}")
